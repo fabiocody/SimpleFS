@@ -24,7 +24,7 @@
 #define KEY_IS_INVALID(key) key < 0
 #define KEY_IS_VALID(key) key >= 0
 #define NODE_ALLOC (struct node *)calloc(1, sizeof(struct node))
-#define CHECK_MALLOC(ptr) if (ptr == NULL) exit(EXIT_FAILURE);
+//#define CHECK_MALLOC(ptr) if (ptr == NULL) exit(EXIT_FAILURE);
 #define DESTROY_NODE(node) {free(node->content); free (node->children_hash); free(node); total_resources--;}
 #define BUFFER_ZERO(buffer, size) for (unsigned long long i = 0; i < size; i++) buffer[i] = 0;
 
@@ -144,7 +144,8 @@ int hash_delete(struct bucket *hash_table, char *string, unsigned char freeup_el
 
 struct bucket *build_hash_table() {     // O(1)
 	struct bucket *hash_table = (struct bucket *)calloc(HASH_DIMENSION, sizeof(struct bucket));
-	CHECK_MALLOC(hash_table);
+	if (hash_table == NULL)
+		return NULL;
 	for (unsigned int i = 0; i < HASH_DIMENSION; i++)
 		hash_table[i].key = INVALID_KEY;
 	return hash_table;
@@ -196,7 +197,8 @@ char *get_parent_name(char *tokenized_path) {       // O(pathlen)
 
 struct node *file_init(char *tokenized_path, struct node *parent, unsigned short level) {       // O(1)
 	struct node *new_file = NODE_ALLOC;
-	CHECK_MALLOC(new_file);
+	if (new_file == NULL)
+		return NULL;
 	new_file->type = FILE_T;
 	strcpy(new_file->name, get_filename(tokenized_path));
 	new_file->children_no = 0;
@@ -208,7 +210,8 @@ struct node *file_init(char *tokenized_path, struct node *parent, unsigned short
 
 struct node *dir_init(char *tokenized_path, struct node *parent, unsigned short level) {        // O(1)
 	struct node *new_dir = NODE_ALLOC;
-	CHECK_MALLOC(new_dir);
+	if (new_dir == NULL)
+		return NULL;
 	new_dir->type = DIR_T;
 	char *filename = get_filename(tokenized_path);
 	if (filename == NULL) {
@@ -220,6 +223,10 @@ struct node *dir_init(char *tokenized_path, struct node *parent, unsigned short 
 	new_dir->level = level;
 	new_dir->parent = parent;
 	new_dir->children_hash = build_hash_table();
+	if (new_dir->children_hash == NULL) {
+		free(new_dir);
+		return NULL;
+	}
 	return new_dir;
 }
 
@@ -242,7 +249,8 @@ char *read_from_stdin(void) {       // O(strlen(input))
 		if (buffer[i - 1] != '\n') {
 			buffer_size *= 2;
 			buffer = (char *)realloc(buffer, buffer_size * sizeof(char));
-			CHECK_MALLOC(buffer);
+			if (buffer == NULL)
+				return NULL;
 		}
 	}
 }
@@ -319,7 +327,8 @@ char *reconstruct_path(struct node *node) {     // O(pathlen)
 	if (path_buffer_size < buffer_size || path_buffer == NULL) {
 		path_buffer_size = buffer_size;
 		path_buffer = (char *)realloc(path_buffer, path_buffer_size);
-		CHECK_MALLOC(path_buffer);
+		/* $$$ if (path_buffer == NULL)
+			return NULL;*/
 	}
 	strcat(new_name, "/");
 	strcat(new_name, node->name);
@@ -432,7 +441,7 @@ void FScreate(char *tokenized_path) {       // O(path)
 		parent_level < MAX_TREE_DEPTH &&
 		parent->children_no < MAX_CHILDREN) {
 		new_file = file_init(tokenized_path, parent, parent_level + 1);
-		if (KEY_IS_VALID(hash_insert(parent->children_hash, new_file))) {
+		if (new_file != NULL && KEY_IS_VALID(hash_insert(parent->children_hash, new_file))) {
 			parent->children_no++;
 			total_resources++;
 			if (max_level < parent_level + 1)
@@ -455,7 +464,7 @@ void FScreate_dir(char *tokenized_path) {       // O(path)
 		parent_level < MAX_TREE_DEPTH &&
 		parent->children_no < MAX_CHILDREN) {
 		new_dir = dir_init(tokenized_path, parent, parent_level + 1);
-		if (KEY_IS_VALID(hash_insert(parent->children_hash, new_dir))) {
+		if (new_dir != NULL && KEY_IS_VALID(hash_insert(parent->children_hash, new_dir))) {
 			parent->children_no++;
 			total_resources++;
 			if (max_level < parent_level + 1)
@@ -487,16 +496,17 @@ void FSwrite(char *tokenized_path, char *content) {     // O(path + file_content
 	unsigned long long content_len = strlen(content);
 	if (file != NULL && file->type == FILE_T) {
 		if (strcmp(filename, file->name) == 0) {
-			if (file->content != NULL) {
+			/*if (file->content != NULL) {
 				free(file->content);
 				file->content = NULL;
-			}
+			}*/
 			file->content = (char *)realloc(file->content, (content_len + 1) * sizeof(char));
-			CHECK_MALLOC(file->content);
-			BUFFER_ZERO(file->content, content_len + 1);
-			strcpy(file->content, content);
-			printf("ok %llu\n", content_len);
-			return;
+			if (file->content != NULL) {
+				BUFFER_ZERO(file->content, content_len + 1);
+				strcpy(file->content, content);
+				printf("ok %llu\n", content_len);
+				return;
+			}
 		}
 	}
 	puts("no");
@@ -553,7 +563,10 @@ void FSfind(char *name) {       // O(# total resources + (found resources)^2)
 	char *results[total_resources];
 	for (unsigned long long i = 0; i < total_resources; i++) {
 		results[i] = (char *)calloc(max_level * MAX_NAME_LEN, sizeof(char));
-		CHECK_MALLOC(results[i]);
+		if (results[i] == NULL) {
+			puts("no");
+			return;
+		}
 	}
 	find_recursive(root, name, &index, results);
 	if (index == 0)
@@ -580,7 +593,8 @@ int main(int argc, char *argv[]) {
 	char *command = NULL, *path = NULL, *content = NULL;
 	unsigned char verbose = 0;
 	buffer = (char *)calloc(buffer_size, sizeof(char));
-	CHECK_MALLOC(buffer);
+	if (buffer == NULL)
+		exit(EXIT_FAILURE);
 	root = dir_init(ROOT_NAME, NULL, 1);
 	
 	if (argc >= 2) {
@@ -596,7 +610,7 @@ int main(int argc, char *argv[]) {
 		// MARK: Read
 		command = path = content = NULL;
 		buffer = read_from_stdin();
-		if (STOP_READING || buffer[0] == '\0')
+		if (buffer == NULL || STOP_READING || buffer[0] == '\0')
 			break;
 		
 		// MARK: Replace spaces with nulls throughout the array (except for content part)
