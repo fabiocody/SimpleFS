@@ -26,7 +26,7 @@
 #define NODE_ALLOC (struct node *)calloc(1, sizeof(struct node))
 //#define CHECK_MALLOC(ptr) if (ptr == NULL) exit(EXIT_FAILURE);
 #define DESTROY_NODE(node) {free(node->content); free (node->children_hash); free(node); total_resources--;}
-#define BUFFER_ZERO(buffer, size) for (unsigned long long i = 0; i < size; i++) buffer[i] = 0;
+#define BUFFER_ZERO(buffer, size) for (unsigned long long i = 0; i < size; i++) {buffer[i] = 0;}
 
 
 
