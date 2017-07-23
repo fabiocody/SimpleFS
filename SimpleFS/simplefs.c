@@ -32,6 +32,7 @@
 // MARK: Behavior defines
 #define AVALANCHE
 //#define TEST
+//#define CLEANUP
 
 
 // MARK: - Data Structures
@@ -873,14 +874,15 @@ int main(int argc, char *argv[]) {
 		
 	}
 	
-	/*BUFFER_ZERO(buffer, buffer_size);
+	#ifdef CLEANUP
+	BUFFER_ZERO(buffer, buffer_size);
 	strcpy(buffer, "/");
 	prepare_path_tokens(buffer);
 	FSdelete_r(buffer);
 	free(buffer);
-	free(path_buffer);*/
-	
-	//printf("buffer_size = %llu\n", buffer_size);
+	free(path_buffer);
+	#endif // CLEANUP
 	
 	return 0;
+	
 }
