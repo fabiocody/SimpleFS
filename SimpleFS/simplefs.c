@@ -15,7 +15,7 @@
 #define MAX_CHILDREN 1024
 #define MAX_NAME_LEN 256
 #define MAX_TREE_DEPTH 256
-#define HASH_DIMENSION 2039   // First prime number before MAX_CHILDREN * 2 = 2048
+#define HASH_DIMENSION 1031
 #define DIR_T 0
 #define FILE_T 1
 #define INVALID_KEY -1
@@ -32,7 +32,7 @@
 
 // MARK: Behavior defines
 #define AVALANCHE
-//#define TEST
+#define TEST
 
 
 // MARK: - Data Structures
@@ -52,11 +52,6 @@ struct bucket {
 	struct node *child;
 };
 
-struct list {
-	char *string;
-	struct list *next;
-};
-
 
 
 
@@ -65,11 +60,12 @@ struct list {
 struct node *root = NULL;
 unsigned char STOP_READING = 0;
 char *buffer = NULL;
-unsigned long long buffer_size = 1024;
+size_t buffer_size = 1024;
 char *path_buffer = NULL;
-unsigned long long path_buffer_size = 1024;
+size_t path_buffer_size = 1024;
 unsigned long long total_resources = 1;
 unsigned int max_level = 1;
+size_t pathstrlen;
 
 
 
@@ -92,19 +88,49 @@ unsigned int djb2(char *string) {       // O(1), because strings have finite len
 }
 
 
+unsigned int djb2_opt(char *string) {
+	unsigned int key = 5381;
+	unsigned long len = strlen(string);
+	unsigned int *string_x4 = (unsigned int *)string;
+	size_t i = len >> 2;
+	if (len > 3) {
+		do {
+			key = ((key << 5) + key) + *string_x4++;
+		} while (--i);
+	}
+	if (len & 3) {
+		i = len & 3;
+		string = (char *)&string[i - 1];
+		do {
+			key = ((key << 5) + key) + *string--;
+		} while (--i);
+	}
+	#ifdef AVALANCHE
+	key = (key+0x479ab41d) + (key<<8);
+	key = (key^0xe4aa10ce) ^ (key>>5);
+	key = (key+0x9942f0a6) - (key<<14);
+	key = (key^0x5aedd67d) ^ (key>>3);
+	key = (key+0x17bea992) + (key<<7);
+	#endif // AVALANCHE
+	return ((key & 0xff000000) >> 24) + ((key & 0xff0000) >> 16) + ((key & 0xff00) >> 8) + (key & 0xff);
+}
+
+
 unsigned int double_hash(char *string, unsigned int step) {		// O(1)
 	unsigned int key = djb2(string);
 	if (step == 0)
 		return key & 0x3ff;		// key % 1024
 	else
-		return (key + step * (1 + (key & 0x3ff - 1))) & 0x3ff;
+		return (key + step * (1 + ((key & 0x3ff) - 1))) & 0x3ff;
 }
 
 
 int hash_insert(struct bucket *hash_table, struct node *node) {     // O(HASH_DIMENSION) ≈ O(k)
 	unsigned int orig_key = double_hash(node->name, 0);
+	int key = orig_key;
 	for (unsigned int i = 0; i < HASH_DIMENSION; i++) {
-		int key = double_hash(node->name, i);
+		if (i > 0)
+			key = double_hash(node->name, i);
 		if (KEY_IS_INVALID(hash_table[key].key)) {
 			hash_table[key].child = node;
 			hash_table[key].key = orig_key;
@@ -154,8 +180,7 @@ struct bucket *build_hash_table() {     // O(1)
 
 void prepare_path_tokens(char *path) {      // O(strlen(path)) ≈ O(k)
 	// Replace all the slashes with nulls
-	unsigned long len = strlen(path);
-	for (unsigned int i = 0; i < len; i++) {
+	for (unsigned int i = 0; i < pathstrlen; i++) {
 		if (path[i] == '/')
 			path[i] = '\0';
 	}
@@ -173,25 +198,38 @@ char *get_next_token(char *tokenized_path) {        // O(1)
 
 
 char *get_filename(char *tokenized_path) {      // O(pathlen)
-	char *token = get_next_token(tokenized_path), *prev_token = NULL;
+	char *token;
+	if (pathstrlen > 0) {
+		token = &tokenized_path[pathstrlen - 1];
+		while (*(--token));
+		token++;
+		return token;
+	} else {
+		return NULL;
+	}
+	/*char *token = get_next_token(tokenized_path), *prev_token = NULL;
 	while (token != NULL) {
 		prev_token = token;
 		token = get_next_token(token);
 	}
-	return prev_token;
+	return prev_token;*/
 }
 
 
 char *get_parent_name(char *tokenized_path) {       // O(pathlen)
-	char *token = get_next_token(tokenized_path), *prev_token = NULL;
+	char *token = get_next_token(tokenized_path)/*, *prev_token = NULL*/;
 	char *filename = get_filename(tokenized_path);
 	if (token == filename)
 		return "";
-	while (token != filename) {
+	token = &tokenized_path[pathstrlen - strlen(filename) - 1];
+	while (*(--token));
+	token++;
+	return token;
+	/*while (token != filename) {
 		prev_token = token;
 		token = get_next_token(token);
 	}
-	return prev_token;
+	return prev_token;*/
 }
 
 
@@ -282,12 +320,10 @@ struct node *walk(char *tokenized_path) {       // O(pathlen)
 	// Walk through the tree until the last valid position
 	struct node *curr_node = root, *prev_node = NULL;
 	char *token = get_next_token(tokenized_path);
-	unsigned char c = 0;
 	while (curr_node != NULL) {
 		prev_node = curr_node;
 		curr_node = get_child(curr_node, token);
 		token = get_next_token(token);
-		c = 0;
 	}
 	unsigned int counter = 0;
 	while (token != NULL) {
@@ -356,7 +392,7 @@ void find_recursive(struct node *node, char *name, unsigned long long *index, ch
 #ifdef TEST
 void walk_recursive(struct node *node) {        // O(children number)
 	if (path_buffer != NULL)
-		buffer_zero(path_buffer, path_buffer_size);
+		BUFFER_ZERO(path_buffer, path_buffer_size);
 	if (node == root)
 		printf("%p - /\n", node);
 	else
@@ -631,12 +667,14 @@ int main(int argc, char *argv[]) {
 			}
 		}
 		
+		pathstrlen = strlen(path);
+		
 		// MARK: Set content pointer and remove quotes
 		for (unsigned int i = 0; i < buffer_size - strlen(command) - 1; i++) {
 			if (path[i] == '\0' && path[i + 1] == '"') {
 				path[i + 1] = '\0';
 				content = &path[i + 2];
-				for (unsigned int j = 0; j < buffer_size - strlen(command) - strlen(path) - 2; j++) {
+				for (unsigned int j = 0; j < buffer_size - strlen(command) - pathstrlen - 2; j++) {
 					if (content[j] == '"')
 						content[j] = '\0';
 				}
@@ -683,12 +721,12 @@ int main(int argc, char *argv[]) {
 		
 	}
 	
-	BUFFER_ZERO(buffer, buffer_size);
+	/*BUFFER_ZERO(buffer, buffer_size);
 	strcpy(buffer, "/");
 	prepare_path_tokens(buffer);
 	FSdelete_r(buffer);
 	free(buffer);
-	free(path_buffer);
+	free(path_buffer);*/
 	
 	//printf("buffer_size = %llu\n", buffer_size);
 	
