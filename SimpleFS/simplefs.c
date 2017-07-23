@@ -25,17 +25,23 @@
 #define KEY_IS_VALID(key) key >= 0
 #define NODE_ALLOC (struct node *)calloc(1, sizeof(struct node))
 //#define CHECK_MALLOC(ptr) if (ptr == NULL) exit(EXIT_FAILURE);
-#define DESTROY_NODE(node) {free(node->content); free (node->children_hash); free(node); total_resources--;}
 #define BUFFER_ZERO(buffer, size) for (unsigned long long i = 0; i < size; i++) {buffer[i] = 0;}
 
 
 
 // MARK: Behavior defines
 #define AVALANCHE
-#define TEST
+//#define TEST
 
 
 // MARK: - Data Structures
+
+struct index_node {		// Index used in FSfind
+	int key;
+	struct index_node *left;
+	struct index_node *right;
+	struct index_node *parent;
+};
 
 struct node {
 	unsigned char type;
@@ -45,6 +51,7 @@ struct node {
 	char *content;
 	struct node *parent;
 	struct bucket *children_hash;
+	struct index_node *key_index;
 };
 
 struct bucket {
@@ -70,7 +77,112 @@ size_t pathstrlen;
 
 
 
-// MARK: - Functions
+// MARK: - BST functions
+
+void KIinorder_walk(struct index_node *node) {
+	if (node != NULL) {
+		KIinorder_walk(node->left);
+		printf("%d\n", node->key);
+		KIinorder_walk(node->right);
+	}
+}
+
+
+struct index_node *KImin(struct index_node *node) {
+	while (node != NULL && node->left != NULL)
+		node = node->left;
+	return node;
+}
+
+
+struct index_node *KImax(struct index_node *node) {
+	while (node->right != NULL)
+		node = node->right;
+	return node;
+}
+
+
+struct index_node *KIsearch(struct index_node *node, int key) {
+	if (node == NULL || node->key == key) return node;
+	if (key < node->key) return KIsearch(node->left, key);
+	return KIsearch(node->right, key);
+}
+
+
+struct index_node *KInext(struct index_node *x) {
+	if (x->right != NULL)
+		return KImin(x->right);
+	struct index_node *y = x->parent;
+	while (y != NULL && y->right == x) {
+		x = y;
+		y = y->parent;
+	}
+	return y;
+}
+
+
+struct index_node *KIinsert(struct index_node *root, int key) {
+	struct index_node *prev = NULL;
+	struct index_node *curr = root;
+	while (curr != NULL) {
+		prev = curr;
+		if (key < curr->key)
+			curr = curr->left;
+		else curr = curr->right;
+	}
+	struct index_node *new = (struct index_node *)calloc(1, sizeof(struct index_node));
+	if (new == NULL) {
+		perror("malloc failed");
+		exit(EXIT_FAILURE);
+	}
+	new->parent = prev;
+	new->key = key;
+	if (prev == NULL)
+		return new;
+	if (key < prev->key)
+		prev->left = new;
+	else prev->right = new;
+	return root;
+}
+
+
+struct index_node *KIdelete(struct index_node *root, int key) {
+	struct index_node *x = KIsearch(root, key);
+	struct index_node *tobedeleted = NULL;
+	struct index_node *subtree = NULL;
+	if (x->left == NULL || x->right == NULL)
+		tobedeleted = x;
+	else tobedeleted = KInext(x);
+	if (tobedeleted->left != NULL)
+		subtree = tobedeleted->left;
+	else subtree = tobedeleted->right;
+	if (subtree != NULL)
+		subtree->parent = tobedeleted->parent;
+	if (tobedeleted->parent == NULL) {
+		free(tobedeleted);
+		return subtree;
+	}
+	if (tobedeleted == tobedeleted->parent->left)
+		tobedeleted->parent->left = subtree;
+	else tobedeleted->parent->right = subtree;
+	if (tobedeleted != x)
+		x->key = tobedeleted->key;
+	free(tobedeleted);
+	return root;
+}
+
+
+struct index_node *KIdestroy(struct index_node *node) {
+	if (node != NULL) {
+		KIdestroy(node->left);
+		KIdestroy(node->right);
+		free(node);
+	}
+	return NULL;
+}
+
+
+// MARK: - Hash functions
 
 unsigned int djb2(char *string) {       // O(1), because strings have finite length (255)
 	unsigned int key = 5381;
@@ -159,8 +271,14 @@ int hash_delete(struct bucket *hash_table, char *string, unsigned char freeup_el
 	int key = hash_lookup(hash_table, string);
 	if (KEY_IS_VALID(key)) {
 		hash_table[key].key = TOMBSTONE;
-		if (freeup_element)
-			DESTROY_NODE(hash_table[key].child);
+		if (freeup_element) {
+			struct node *node = hash_table[key].child;
+			free(node->content);
+			free (node->children_hash);
+			KIdestroy(node->key_index);
+			free(node);
+			total_resources--;
+		}
 		hash_table[key].child = NULL;
 		return key;
 	}
@@ -177,6 +295,41 @@ struct bucket *build_hash_table() {     // O(1)
 	return hash_table;
 }
 
+
+// MARK: - Quicksort
+
+void swap(char *array[], long long i, long long j) {
+	char *temp = array[i];
+	array[i] = array[j];
+	array[j] = temp;
+}
+
+
+long long partition(char *array[], long long lo, long long hi) {
+	char *pivot = array[hi];
+	long long i = lo - 1;
+	for (long long j = lo; j < hi; j++) {
+		if (strcmp(array[j], pivot) <= 0) {
+			i++;
+			if (i != j)
+				swap(array, i, j);
+		}
+	}
+	swap(array, i+1, hi);
+	return i+1;
+}
+
+
+void quicksort(char *array[], long long lo, long long hi) {
+	if (lo < hi) {
+		long long p = partition(array, lo, hi);
+		quicksort(array, lo, p-1);
+		quicksort(array, p+1, hi);
+	}
+}
+
+
+// MARK: - Other functions
 
 void prepare_path_tokens(char *path) {      // O(strlen(path)) ≈ O(k)
 	// Replace all the slashes with nulls
@@ -199,20 +352,22 @@ char *get_next_token(char *tokenized_path) {        // O(1)
 
 char *get_filename(char *tokenized_path) {      // O(pathlen)
 	char *token;
-	if (pathstrlen > 0) {
+	if (pathstrlen > 64) {
 		token = &tokenized_path[pathstrlen - 1];
 		while (*(--token));
 		token++;
 		return token;
+	} else if (pathstrlen > 0) {
+		token = get_next_token(tokenized_path);
+		char *prev_token = NULL;
+		while (token != NULL) {
+			prev_token = token;
+			token = get_next_token(token);
+		}
+		return prev_token;
 	} else {
 		return NULL;
 	}
-	/*char *token = get_next_token(tokenized_path), *prev_token = NULL;
-	while (token != NULL) {
-		prev_token = token;
-		token = get_next_token(token);
-	}
-	return prev_token;*/
 }
 
 
@@ -221,15 +376,19 @@ char *get_parent_name(char *tokenized_path) {       // O(pathlen)
 	char *filename = get_filename(tokenized_path);
 	if (token == filename)
 		return "";
-	token = &tokenized_path[pathstrlen - strlen(filename) - 1];
-	while (*(--token));
-	token++;
-	return token;
-	/*while (token != filename) {
-		prev_token = token;
-		token = get_next_token(token);
+	if (pathstrlen > 64) {
+		token = &tokenized_path[pathstrlen - strlen(filename) - 1];
+		while (*(--token));
+		token++;
+		return token;
+	} else {
+		char *prev_token = NULL;
+		while (token != filename) {
+			prev_token = token;
+			token = get_next_token(token);
+		}
+		return prev_token;
 	}
-	return prev_token;*/
 }
 
 
@@ -354,7 +513,11 @@ void delete_recursive(struct node *node) {      // O(children number)
 			if (node->children_hash[i].child != NULL)
 				delete_recursive(node->children_hash[i].child);
 	}
-	DESTROY_NODE(node);
+	free(node->content);
+	free (node->children_hash);
+	KIdestroy(node->key_index);
+	free(node);
+	total_resources--;
 }
 
 
@@ -375,16 +538,28 @@ char *reconstruct_path(struct node *node) {     // O(pathlen)
 
 
 void find_recursive(struct node *node, char *name, unsigned long long *index, char **results) {      // O(found * pathlen + total resources)
-	if (strcmp(name, node->name) == 0) {
-		if (path_buffer != NULL)
-			BUFFER_ZERO(path_buffer, path_buffer_size);
-		strcpy(results[*index], reconstruct_path(node));
-		(*index)++;
-	}
-	if (node->type == DIR_T) {
-		for (unsigned int i = 0; i < HASH_DIMENSION; i++)
-			if (node->children_hash[i].child != NULL)
-				find_recursive(node->children_hash[i].child, name, index, results);
+	if (node != NULL) {
+		if (strcmp(name, node->name) == 0) {
+			if (path_buffer != NULL)
+				BUFFER_ZERO(path_buffer, path_buffer_size);
+			results[*index] = (char *)calloc(max_level * MAX_NAME_LEN, sizeof(char));
+			if (results[*index] == NULL) {
+				puts("no");
+				return;
+			}
+			strcpy(results[*index], reconstruct_path(node));
+			(*index)++;
+		}
+		if (node->type == DIR_T) {
+			struct index_node *curr = KImin(node->key_index);
+			while (curr != NULL) {
+				find_recursive(node->children_hash[curr->key].child, name, index, results);
+				curr = KInext(curr);
+			}
+			/*for (unsigned int i = 0; i < HASH_DIMENSION; i++)
+				if (node->children_hash[i].child != NULL)
+					find_recursive(node->children_hash[i].child, name, index, results);*/
+		}
 	}
 }
 
@@ -408,37 +583,6 @@ void walk_recursive(struct node *node) {
 	puts("no");
 }
 #endif // TEST
-
-
-void swap(char *array[], long long i, long long j) {
-	char *temp = array[i];
-	array[i] = array[j];
-	array[j] = temp;
-}
-
-
-long long partition(char *array[], long long lo, long long hi) {
-	char *pivot = array[hi];
-	long long i = lo - 1;
-	for (long long j = lo; j < hi; j++) {
-		if (strcmp(array[j], pivot) <= 0) {
-			i++;
-			if (i != j)
-				swap(array, i, j);
-		}
-	}
-	swap(array, i+1, hi);
-	return i+1;
-}
-
-
-void quicksort(char *array[], long long lo, long long hi) {
-	if (lo < hi) {
-		long long p = partition(array, lo, hi);
-		quicksort(array, lo, p-1);
-		quicksort(array, p+1, hi);
-	}
-}
 
 
 
@@ -472,18 +616,23 @@ void FScreate(char *tokenized_path) {       // O(path)
 	struct node *new_file = NULL;
 	char *parent_name = get_parent_name(tokenized_path);		// O(path)
 	unsigned short parent_level = level(parent);		// O(path)
+	int key;
 	if (strcmp(parent_name, parent->name) == 0 &&
 		parent->type == DIR_T &&
 		parent_level < MAX_TREE_DEPTH &&
 		parent->children_no < MAX_CHILDREN) {
 		new_file = file_init(tokenized_path, parent, parent_level + 1);
-		if (new_file != NULL && KEY_IS_VALID(hash_insert(parent->children_hash, new_file))) {
-			parent->children_no++;
-			total_resources++;
-			if (max_level < parent_level + 1)
-				max_level = parent_level + 1;
-			puts("ok");
-			return;
+		if (new_file != NULL) {
+			key = hash_insert(parent->children_hash, new_file);
+			if (KEY_IS_VALID(key)) {
+				parent->key_index = KIinsert(parent->key_index, key);
+				parent->children_no++;
+				total_resources++;
+				if (max_level < parent_level + 1)
+					max_level = parent_level + 1;
+				puts("ok");
+				return;
+			}
 		}
 	}
 	puts("no");
@@ -495,18 +644,23 @@ void FScreate_dir(char *tokenized_path) {       // O(path)
 	struct node *new_dir = NULL;
 	char *parent_name = get_parent_name(tokenized_path);		// O(path)
 	unsigned short parent_level = level(parent);		// O(path)
+	int key;
 	if (parent != NULL && strcmp(parent_name, parent->name) == 0 &&
 		parent->type == DIR_T &&
 		parent_level < MAX_TREE_DEPTH &&
 		parent->children_no < MAX_CHILDREN) {
 		new_dir = dir_init(tokenized_path, parent, parent_level + 1);
-		if (new_dir != NULL && KEY_IS_VALID(hash_insert(parent->children_hash, new_dir))) {
-			parent->children_no++;
-			total_resources++;
-			if (max_level < parent_level + 1)
-				max_level = parent_level + 1;
-			puts("ok");
-			return;
+		if (new_dir != NULL) {
+			key = hash_insert(parent->children_hash, new_dir);
+			if (KEY_IS_VALID(key)) {
+				parent->key_index = KIinsert(parent->key_index, key);
+				parent->children_no++;
+				total_resources++;
+				if (max_level < parent_level + 1)
+					max_level = parent_level + 1;
+				puts("ok");
+				return;
+			}
 		}
 	}
 	puts("no");
@@ -553,11 +707,14 @@ void FSdelete(char *tokenized_path) {     // O(path)
 	struct node *node = walk(tokenized_path);	// O(path)
 	struct node *parent = NULL;
 	char *filename = get_filename(tokenized_path);		// O(path)
+	int key;
 	if (node != NULL) {
 		if (strcmp(filename, node->name) == 0) {
 			parent = node->parent;
 			if (node->children_no == 0 && path_level(tokenized_path) == node->level) {
-				if (KEY_IS_VALID(hash_delete(parent->children_hash, filename, 1))) {
+				key = hash_delete(parent->children_hash, filename, 1);
+				if (KEY_IS_VALID(key)) {
+					parent->key_index = KIdelete(parent->key_index, key);
 					parent->children_no--;
 					puts("ok");
 					return;
@@ -573,6 +730,7 @@ void FSdelete_r(char *tokenized_path) {       // O(# children)
 	struct node *node = walk(tokenized_path);
 	struct node *parent = NULL;
 	char *filename = get_filename(tokenized_path);
+	int key;
 	if (node != NULL) {
 		if (filename == NULL) {
 			if (node == root) {
@@ -581,7 +739,9 @@ void FSdelete_r(char *tokenized_path) {       // O(# children)
 			}
 		} else if (strcmp(filename, node->name) == 0) {
 			parent = node->parent;
-			if (KEY_IS_VALID(hash_delete(parent->children_hash, filename, 0))) {
+			key = hash_delete(parent->children_hash, filename, 0);
+			if (KEY_IS_VALID(key)) {
+				parent->key_index = KIdelete(parent->key_index, key);
 				parent->children_no--;
 				//total_resources--;
 			}
@@ -597,23 +757,15 @@ void FSdelete_r(char *tokenized_path) {       // O(# children)
 void FSfind(char *name) {       // O(# total resources + (found resources)^2)
 	unsigned long long index = 0;
 	char *results[total_resources];
-	for (unsigned long long i = 0; i < total_resources; i++) {
-		results[i] = (char *)calloc(max_level * MAX_NAME_LEN, sizeof(char));
-		if (results[i] == NULL) {
-			puts("no");
-			return;
-		}
-	}
 	find_recursive(root, name, &index, results);
 	if (index == 0)
 		puts("no");
 	else {
-		quicksort(results, 0, total_resources - 1);
-		for (unsigned long long i = 0; i < total_resources; i++)
-			if (results[i][0] != '\0')
-				printf("ok %s\n", results[i]);
+		quicksort(results, 0, index - 1);
+		for (unsigned long long i = 0; i < index; i++)
+			printf("ok %s\n", results[i]);
 	}
-	for (unsigned long long i = 0; i < total_resources; i++)
+	for (unsigned long long i = 0; i < index; i++)
 		free(results[i]);
 }
 
