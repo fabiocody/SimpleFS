@@ -24,7 +24,6 @@
 #define KEY_IS_INVALID(key) key < 0
 #define KEY_IS_VALID(key) key >= 0
 #define NODE_ALLOC (struct node *)calloc(1, sizeof(struct node))
-//#define CHECK_MALLOC(ptr) if (ptr == NULL) exit(EXIT_FAILURE);
 #define BUFFER_ZERO(buffer, size) for (unsigned long long i = 0; i < size; i++) {buffer[i] = 0;}
 
 
