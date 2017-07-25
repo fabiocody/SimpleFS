@@ -79,25 +79,9 @@ size_t pathstrlen;
 
 // MARK: - BST functions
 
-void KIinorder_walk(struct index_node *node) {
-	if (node != NULL) {
-		KIinorder_walk(node->left);
-		printf("%d\n", node->key);
-		KIinorder_walk(node->right);
-	}
-}
-
-
 struct index_node *KImin(struct index_node *node) {
 	while (node != NULL && node->left != NULL)
 		node = node->left;
-	return node;
-}
-
-
-struct index_node *KImax(struct index_node *node) {
-	while (node->right != NULL)
-		node = node->right;
 	return node;
 }
 
@@ -114,18 +98,6 @@ struct index_node *KInext(struct index_node *x) {
 		return KImin(x->right);
 	struct index_node *y = x->parent;
 	while (y != NULL && y->right == x) {
-		x = y;
-		y = y->parent;
-	}
-	return y;
-}
-
-
-struct index_node *KIprev(struct index_node *x) {
-	if (x->left != NULL)
-		return KImax(x->left);
-	struct index_node *y = x->parent;
-	while (y != NULL && y->left == x) {
 		x = y;
 		y = y->parent;
 	}
@@ -209,34 +181,6 @@ unsigned int djb2(char *string) {       // O(1), because strings have finite len
 	key = (key+0x17bea992) + (key<<7);
 	#endif // AVALANCHE
 	return key;
-}
-
-
-unsigned int djb2_opt(char *string) {
-	unsigned int key = 5381;
-	unsigned long len = strlen(string);
-	unsigned int *string_x4 = (unsigned int *)string;
-	size_t i = len >> 2;
-	if (len > 3) {
-		do {
-			key = ((key << 5) + key) + *string_x4++;
-		} while (--i);
-	}
-	if (len & 3) {
-		i = len & 3;
-		string = (char *)&string[i - 1];
-		do {
-			key = ((key << 5) + key) + *string--;
-		} while (--i);
-	}
-	#ifdef AVALANCHE
-	key = (key+0x479ab41d) + (key<<8);
-	key = (key^0xe4aa10ce) ^ (key>>5);
-	key = (key+0x9942f0a6) - (key<<14);
-	key = (key^0x5aedd67d) ^ (key>>3);
-	key = (key+0x17bea992) + (key<<7);
-	#endif // AVALANCHE
-	return ((key & 0xff000000) >> 24) + ((key & 0xff0000) >> 16) + ((key & 0xff00) >> 8) + (key & 0xff);
 }
 
 
@@ -508,18 +452,6 @@ struct node *walk(char *tokenized_path) {       // O(pathlen)
 		return NULL;
 	return prev_node;
 }
-
-
-/*unsigned short level(struct node *node) {   // O(pathlen)
-	unsigned short counter = 1;
-	if (node == NULL)
-		return 0;
-	while (node->parent != NULL) {
-		node = node->parent;
-		counter++;
-	}
-	return counter;
-}*/
 
 
 void delete_recursive(struct node *node) {      // O(children number)
