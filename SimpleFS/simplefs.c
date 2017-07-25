@@ -231,9 +231,9 @@ unsigned int djb2_opt(char *string) {
 unsigned int double_hash(char *string, unsigned int step) {		// O(1)
 	unsigned int key = djb2(string);
 	if (step == 0)
-		return key & 0x3ff;		// key % 1024
+		return key % HASH_DIMENSION;
 	else
-		return (key + step * (1 + ((key & 0x3ff) - 1))) & 0x3ff;
+		return (key + step * (1 + (key % (HASH_DIMENSION - 1)))) % HASH_DIMENSION;
 }
 
 
@@ -392,20 +392,20 @@ char *get_parent_name(char *tokenized_path) {       // O(pathlen)
 }
 
 
-struct node *file_init(char *tokenized_path, struct node *parent, unsigned short level) {       // O(1)
+struct node *file_init(char *tokenized_path, struct node *parent) {       // O(1)
 	struct node *new_file = NODE_ALLOC;
 	if (new_file == NULL)
 		return NULL;
 	new_file->type = FILE_T;
 	strcpy(new_file->name, get_filename(tokenized_path));
 	new_file->children_no = 0;
-	new_file->level = level;
+	new_file->level = parent->level + 1;
 	new_file->parent = parent;
 	return new_file;
 }
 
 
-struct node *dir_init(char *tokenized_path, struct node *parent, unsigned short level) {        // O(1)
+struct node *dir_init(char *tokenized_path, struct node *parent) {        // O(1)
 	struct node *new_dir = NODE_ALLOC;
 	if (new_dir == NULL)
 		return NULL;
@@ -417,8 +417,11 @@ struct node *dir_init(char *tokenized_path, struct node *parent, unsigned short 
 		strcpy(new_dir->name, filename);
 	}
 	new_dir->children_no = 0;
-	new_dir->level = level;
 	new_dir->parent = parent;
+	if (parent)
+		new_dir->level = parent->level + 1;
+	else
+		new_dir->level = 1;
 	new_dir->children_hash = build_hash_table();
 	if (new_dir->children_hash == NULL) {
 		free(new_dir);
@@ -495,7 +498,7 @@ struct node *walk(char *tokenized_path) {       // O(pathlen)
 }
 
 
-unsigned short level(struct node *node) {   // O(pathlen)
+/*unsigned short level(struct node *node) {   // O(pathlen)
 	unsigned short counter = 1;
 	if (node == NULL)
 		return 0;
@@ -504,7 +507,7 @@ unsigned short level(struct node *node) {   // O(pathlen)
 		counter++;
 	}
 	return counter;
-}
+}*/
 
 
 void delete_recursive(struct node *node) {      // O(children number)
@@ -615,21 +618,21 @@ void FScreate(char *tokenized_path) {       // O(path)
 	}
 	struct node *new_file = NULL;
 	char *parent_name = get_parent_name(tokenized_path);		// O(path)
-	unsigned short parent_level = level(parent);		// O(path)
+	//unsigned short parent_level = level(parent);		// O(path)
 	int key;
 	if (strcmp(parent_name, parent->name) == 0 &&
 		parent->type == DIR_T &&
-		parent_level < MAX_TREE_DEPTH &&
+		parent->level < MAX_TREE_DEPTH - 1 &&
 		parent->children_no < MAX_CHILDREN) {
-		new_file = file_init(tokenized_path, parent, parent_level + 1);
+		new_file = file_init(tokenized_path, parent);
 		if (new_file != NULL) {
 			key = hash_insert(parent->children_hash, new_file);
 			if (KEY_IS_VALID(key)) {
 				parent->key_index = KIinsert(parent->key_index, key);
 				parent->children_no++;
 				total_resources++;
-				if (max_level < parent_level + 1)
-					max_level = parent_level + 1;
+				if (max_level < new_file->level)
+					max_level = new_file->level;
 				puts("ok");
 				return;
 			}
@@ -643,21 +646,21 @@ void FScreate_dir(char *tokenized_path) {       // O(path)
 	struct node *parent = walk(tokenized_path);		// O(path)
 	struct node *new_dir = NULL;
 	char *parent_name = get_parent_name(tokenized_path);		// O(path)
-	unsigned short parent_level = level(parent);		// O(path)
+	//unsigned short parent_level = level(parent);		// O(path)
 	int key;
 	if (parent != NULL && strcmp(parent_name, parent->name) == 0 &&
 		parent->type == DIR_T &&
-		parent_level < MAX_TREE_DEPTH &&
+		parent->level < MAX_TREE_DEPTH - 1 &&
 		parent->children_no < MAX_CHILDREN) {
-		new_dir = dir_init(tokenized_path, parent, parent_level + 1);
+		new_dir = dir_init(tokenized_path, parent);
 		if (new_dir != NULL) {
 			key = hash_insert(parent->children_hash, new_dir);
 			if (KEY_IS_VALID(key)) {
 				parent->key_index = KIinsert(parent->key_index, key);
 				parent->children_no++;
 				total_resources++;
-				if (max_level < parent_level + 1)
-					max_level = parent_level + 1;
+				if (max_level < new_dir->level)
+					max_level = new_dir->level;
 				puts("ok");
 				return;
 			}
@@ -783,7 +786,7 @@ int main(int argc, char *argv[]) {
 	buffer = (char *)calloc(buffer_size, sizeof(char));
 	if (buffer == NULL)
 		exit(EXIT_FAILURE);
-	root = dir_init(ROOT_NAME, NULL, 1);
+	root = dir_init(ROOT_NAME, NULL);
 	
 	if (argc >= 2) {
 		if (strcmp(argv[1], "-v") == 0)
