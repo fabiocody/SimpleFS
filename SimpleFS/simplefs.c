@@ -121,6 +121,18 @@ struct index_node *KInext(struct index_node *x) {
 }
 
 
+struct index_node *KIprev(struct index_node *x) {
+	if (x->left != NULL)
+		return KImax(x->left);
+	struct index_node *y = x->parent;
+	while (y != NULL && y->left == x) {
+		x = y;
+		y = y->parent;
+	}
+	return y;
+}
+
+
 struct index_node *KIinsert(struct index_node *root, int key) {
 	struct index_node *prev = NULL;
 	struct index_node *curr = root;
@@ -298,14 +310,14 @@ struct bucket *build_hash_table() {     // O(1)
 
 // MARK: - Quicksort
 
-void swap(char *array[], long long i, long long j) {
+void swap(char *array[], long long i, long long j) {		// O(1)
 	char *temp = array[i];
 	array[i] = array[j];
 	array[j] = temp;
 }
 
 
-long long partition(char *array[], long long lo, long long hi) {
+long long partition(char *array[], long long lo, long long hi) {		// O(n)
 	char *pivot = array[hi];
 	long long i = lo - 1;
 	for (long long j = lo; j < hi; j++) {
@@ -320,7 +332,7 @@ long long partition(char *array[], long long lo, long long hi) {
 }
 
 
-void quicksort(char *array[], long long lo, long long hi) {
+void quicksort(char *array[], long long lo, long long hi) {		// O(n log n) ≤ T(n) ≤ O(n^2)
 	if (lo < hi) {
 		long long p = partition(array, lo, hi);
 		quicksort(array, lo, p-1);
