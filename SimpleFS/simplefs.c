@@ -503,9 +503,6 @@ void find_recursive(struct node *node, char *name, unsigned long long *index, ch
 				find_recursive(node->children_hash[curr->key].child, name, index, results);
 				curr = KInext(curr);
 			}
-			/*for (unsigned int i = 0; i < HASH_DIMENSION; i++)
-				if (node->children_hash[i].child != NULL)
-					find_recursive(node->children_hash[i].child, name, index, results);*/
 		}
 	}
 }
@@ -690,7 +687,6 @@ void FSdelete_r(char *tokenized_path) {       // O(# children)
 			if (KEY_IS_VALID(key)) {
 				parent->key_index = KIdelete(parent->key_index, key);
 				parent->children_no--;
-				//total_resources--;
 			}
 			delete_recursive(node);
 			puts("ok");
