@@ -456,9 +456,11 @@ struct node *walk(char *tokenized_path) {       // O(pathlen)
 
 void delete_recursive(struct node *node) {      // O(children number)
 	if (node->type == DIR_T) {
-		for (unsigned short i = 0; i < HASH_DIMENSION; i++)
-			if (node->children_hash[i].child != NULL)
-				delete_recursive(node->children_hash[i].child);
+		struct index_node *curr = KImin(node->key_index);
+		while (curr != NULL) {
+			delete_recursive(node->children_hash[curr->key].child);
+			curr = KInext(curr);
+		}
 	}
 	free(node->content);
 	free (node->children_hash);
