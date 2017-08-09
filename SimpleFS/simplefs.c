@@ -65,6 +65,7 @@ size_t path_buffer_size = 1024;
 unsigned long long total_resources = 1;
 unsigned int max_level = 0;
 size_t pathstrlen;
+struct node *tombstone;
 
 
 
@@ -100,7 +101,7 @@ int hash_insert(struct node **hash_table, struct node *node) {     // O(HASH_DIM
 	int key;
 	for (unsigned int i = 0; i < HASH_DIMENSION; i++) {
 		key = double_hash(node->name, i);
-		if (hash_table[key] == NULL) {
+		if (hash_table[key] == NULL || hash_table[key] == tombstone) {
 			hash_table[key] = node;
 			return key;     // SUCCESS
 		}
@@ -113,7 +114,9 @@ int hash_lookup(struct node **hash_table, char *string) {      // O(HASH_DIMENSI
 	int key;
 	for (unsigned int i = 0; i < HASH_DIMENSION; i++) {
 		key = double_hash(string, i);
-		if (hash_table[key] != NULL)
+		if (hash_table[key] == NULL)
+			break;
+		else if (hash_table[key] != tombstone)
 			if (strcmp(hash_table[key]->name, string) == 0)
 				return key;
 	}
@@ -125,14 +128,13 @@ int hash_delete(struct node **hash_table, char *string, unsigned char freeup_ele
 	int key = hash_lookup(hash_table, string);
 	if (KEY_IS_VALID(key)) {
 		if (freeup_element) {
-			struct node *node = hash_table[key];
-			free(node->content);
-			free (node->children_hash);
-			free(node->name);
-			free(node);
+			free(hash_table[key]->content);
+			free (hash_table[key]->children_hash);
+			free(hash_table[key]->name);
+			free(hash_table[key]);
 			total_resources--;
 		}
-		hash_table[key] = NULL;
+		hash_table[key] = tombstone;
 		return key;
 	}
 	return INVALID_KEY;
@@ -257,12 +259,23 @@ struct node *file_init(char *tokenized_path, struct node *parent) {       // O(1
 		return NULL;
 	new_file->type = FILE_T;
 	char *filename = get_filename(tokenized_path);
-	new_file->name = (char *)calloc(strlen(filename) + 1, sizeof(char));
-	if (new_file->name == NULL)
-		exit(0);
-	strcpy(new_file->name, filename);
+	if (filename == NULL) {
+		new_file->name = (char *)calloc(strlen("tombstone") + 1, sizeof(char));
+		if (new_file->name == NULL)
+			exit(0);
+		strcpy(new_file->name, "tombstone");
+	}
+	else {
+		new_file->name = (char *)calloc(strlen(filename) + 1, sizeof(char));
+		if (new_file->name == NULL)
+			exit(0);
+		strcpy(new_file->name, filename);
+	}
 	new_file->children_no = 0;
-	new_file->level = parent->level + 1;
+	if (parent)
+		new_file->level = parent->level + 1;
+	else
+		new_file->level = 0;
 	new_file->parent = parent;
 	return new_file;
 }
@@ -652,6 +665,8 @@ int main(int argc, char *argv[]) {
 	if (buffer == NULL)
 		exit(0);
 	root = dir_init(ROOT_NAME, NULL);
+	tombstone = file_init("tombstone", NULL);
+	
 	
 	if (argc >= 2) {
 		if (strcmp(argv[1], "-v") == 0)
