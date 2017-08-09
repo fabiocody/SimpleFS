@@ -36,7 +36,7 @@
 
 struct node {
 	unsigned char type;
-	char name[MAX_NAME_LEN];
+	char *name;
 	unsigned short children_no;
 	unsigned short level;
 	char *content;
@@ -139,6 +139,7 @@ int hash_delete(struct bucket *hash_table, char *string, unsigned char freeup_el
 			struct node *node = hash_table[key].child;
 			free(node->content);
 			free (node->children_hash);
+			free(node->name);
 			free(node);
 			total_resources--;
 		}
@@ -270,7 +271,11 @@ struct node *file_init(char *tokenized_path, struct node *parent) {       // O(1
 	if (new_file == NULL)
 		return NULL;
 	new_file->type = FILE_T;
-	strcpy(new_file->name, get_filename(tokenized_path));
+	char *filename = get_filename(tokenized_path);
+	new_file->name = (char *)calloc(strlen(filename) + 1, sizeof(char));
+	if (new_file->name == NULL)
+		exit(0);
+	strcpy(new_file->name, filename);
 	new_file->children_no = 0;
 	new_file->level = parent->level + 1;
 	new_file->parent = parent;
@@ -285,8 +290,14 @@ struct node *dir_init(char *tokenized_path, struct node *parent) {        // O(1
 	new_dir->type = DIR_T;
 	char *filename = get_filename(tokenized_path);
 	if (filename == NULL) {
+		new_dir->name = (char *)calloc(2, sizeof(char));
+		if (new_dir->name == NULL)
+			exit(0);
 		strcpy(new_dir->name, "");
 	} else {
+		new_dir->name = (char *)calloc(strlen(filename) + 1, sizeof(char));
+		if (new_dir->name == NULL)
+			exit(0);
 		strcpy(new_dir->name, filename);
 	}
 	new_dir->children_no = 0;
@@ -389,7 +400,8 @@ void delete_recursive(struct node *node) {      // O(children number)
 				delete_recursive(node->children_hash[i].child);
 	}
 	free(node->content);
-	free (node->children_hash);
+	free(node->children_hash);
+	free(node->name);
 	free(node);
 	total_resources--;
 }
@@ -554,10 +566,6 @@ void FSwrite(char *tokenized_path, char *content) {     // O(path + file_content
 	unsigned long long content_len = strlen(content);
 	if (file != NULL && file->type == FILE_T) {
 		if (strcmp(filename, file->name) == 0) {
-			/*if (file->content != NULL) {
-				free(file->content);
-				file->content = NULL;
-			}*/
 			file->content = (char *)realloc(file->content, (content_len + 1) * sizeof(char));
 			if (file->content != NULL) {
 				buffer_zero(file->content, content_len + 1);
