@@ -28,18 +28,11 @@
 
 // MARK: Behavior defines
 #define AVALANCHE
-#define TEST
+//#define TEST
 //#define CLEANUP
 
 
 // MARK: - Data Structures
-
-struct index_node {		// Index used in FSfind
-	int key;
-	struct index_node *left;
-	struct index_node *right;
-	struct index_node *parent;
-};
 
 struct node {
 	unsigned char type;
@@ -49,12 +42,18 @@ struct node {
 	char *content;
 	struct node *parent;
 	struct bucket *children_hash;
-	struct index_node *key_index;
 };
 
 struct bucket {
 	int key;
 	struct node *child;
+};
+
+
+struct bst_node {
+	char *path;
+	struct bst_node *left;
+	struct bst_node *right;
 };
 
 
@@ -65,103 +64,14 @@ struct bucket {
 struct node *root = NULL;
 unsigned char STOP_READING = 0;
 char *buffer = NULL;
-size_t buffer_size = 2048;
+size_t buffer_size = 1024;
 char *path_buffer = NULL;
-size_t path_buffer_size = 2048;
+size_t path_buffer_size = 1024;
 unsigned long long total_resources = 1;
 unsigned int max_level = 0;
 size_t pathstrlen;
 
 
-
-
-// MARK: - BST functions
-
-struct index_node *bst_min(struct index_node *node) {
-	while (node != NULL && node->left != NULL)
-		node = node->left;
-	return node;
-}
-
-
-struct index_node *bst_search(struct index_node *node, int key) {
-	if (node == NULL || node->key == key) return node;
-	if (key < node->key) return bst_search(node->left, key);
-	return bst_search(node->right, key);
-}
-
-
-struct index_node *bst_next(struct index_node *x) {
-	if (x->right != NULL)
-		return bst_min(x->right);
-	struct index_node *y = x->parent;
-	while (y != NULL && y->right == x) {
-		x = y;
-		y = y->parent;
-	}
-	return y;
-}
-
-
-struct index_node *bst_insert(struct index_node *root, int key) {
-	struct index_node *prev = NULL;
-	struct index_node *curr = root;
-	while (curr != NULL) {
-		prev = curr;
-		if (key < curr->key)
-			curr = curr->left;
-		else curr = curr->right;
-	}
-	struct index_node *new = (struct index_node *)calloc(1, sizeof(struct index_node));
-	if (new == NULL) {
-		perror("malloc failed");
-		exit(EXIT_FAILURE);
-	}
-	new->parent = prev;
-	new->key = key;
-	if (prev == NULL)
-		return new;
-	if (key < prev->key)
-		prev->left = new;
-	else prev->right = new;
-	return root;
-}
-
-
-struct index_node *bst_delete(struct index_node *root, int key) {
-	struct index_node *x = bst_search(root, key);
-	struct index_node *tobedeleted = NULL;
-	struct index_node *subtree = NULL;
-	if (x->left == NULL || x->right == NULL)
-		tobedeleted = x;
-	else tobedeleted = bst_next(x);
-	if (tobedeleted->left != NULL)
-		subtree = tobedeleted->left;
-	else subtree = tobedeleted->right;
-	if (subtree != NULL)
-		subtree->parent = tobedeleted->parent;
-	if (tobedeleted->parent == NULL) {
-		free(tobedeleted);
-		return subtree;
-	}
-	if (tobedeleted == tobedeleted->parent->left)
-		tobedeleted->parent->left = subtree;
-	else tobedeleted->parent->right = subtree;
-	if (tobedeleted != x)
-		x->key = tobedeleted->key;
-	free(tobedeleted);
-	return root;
-}
-
-
-struct index_node *bst_destroy(struct index_node *node) {
-	if (node != NULL) {
-		bst_destroy(node->left);
-		bst_destroy(node->right);
-		free(node);
-	}
-	return NULL;
-}
 
 
 // MARK: - Hash functions
@@ -229,7 +139,6 @@ int hash_delete(struct bucket *hash_table, char *string, unsigned char freeup_el
 			struct node *node = hash_table[key].child;
 			free(node->content);
 			free (node->children_hash);
-			bst_destroy(node->key_index);
 			free(node);
 			total_resources--;
 		}
@@ -250,35 +159,45 @@ struct bucket *build_hash_table() {     // O(1)
 }
 
 
-// MARK: - Quicksort
-
-void swap(char *array[], long long i, long long j) {		// O(1)
-	char *temp = array[i];
-	array[i] = array[j];
-	array[j] = temp;
-}
 
 
-long long partition(char *array[], long long lo, long long hi) {		// O(n)
-	char *pivot = array[hi];
-	long long i = lo - 1;
-	for (long long j = lo; j < hi; j++) {
-		if (strcmp(array[j], pivot) <= 0) {
-			i++;
-			if (i != j)
-				swap(array, i, j);
-		}
+// MARK: - Binary Search Tree
+
+struct bst_node *bst_insert(struct bst_node *root, char *path) {
+	struct bst_node *new_node = NULL;
+	struct bst_node *prev = NULL;
+	struct bst_node *curr = root;
+	new_node = (struct bst_node *)calloc(1, sizeof(struct bst_node));
+	if (new_node == NULL)
+		exit(0);
+	new_node->path = path;
+	while (curr != NULL) {
+		prev = curr;
+		if (strcmp(path, curr->path) < 0) curr = curr->left;
+		else curr = curr->right;
 	}
-	swap(array, i+1, hi);
-	return i+1;
+	if (prev == NULL) return new_node;
+	else if (strcmp(path, prev->path) < 0) prev->left = new_node;
+	else prev->right = new_node;
+	return root;
 }
 
 
-void quicksort(char *array[], long long lo, long long hi) {		// O(n log n) ≤ T(n) ≤ O(n^2)
-	if (lo < hi) {
-		long long p = partition(array, lo, hi);
-		quicksort(array, lo, p-1);
-		quicksort(array, p+1, hi);
+void bst_in_order_print(struct bst_node *node) {
+	if (node != NULL) {
+		bst_in_order_print(node->left);
+		printf("ok %s\n", node->path);
+		bst_in_order_print(node->right);
+	}
+}
+
+
+void bst_destroy(struct bst_node *node) {
+	if (node != NULL) {
+		bst_destroy(node->left);
+		bst_destroy(node->right);
+		free(node->path);
+		free(node);
 	}
 }
 
@@ -377,18 +296,16 @@ struct node *dir_init(char *tokenized_path, struct node *parent) {        // O(1
 	else
 		new_dir->level = 0;
 	new_dir->children_hash = build_hash_table();
-	if (new_dir->children_hash == NULL) {
-		free(new_dir);
-		return NULL;
-	}
+	if (new_dir->children_hash == NULL)
+		exit(42);
 	return new_dir;
 }
 
 
 void buffer_zero(char *buffer, size_t size) {
-	if (size % 8 == 0) {
-		uint64_t *ptr = (uint64_t *)buffer;
-		size /= 8;
+	if (size % sizeof(unsigned long long) == 0) {
+		unsigned long long *ptr = (unsigned long long *)buffer;
+		size /= sizeof(unsigned long long);
 		for (size_t i = 0; i < size; i++)
 			ptr[i] = 0;
 	} else {
@@ -467,15 +384,12 @@ struct node *walk(char *tokenized_path) {       // O(pathlen)
 
 void delete_recursive(struct node *node) {      // O(children number)
 	if (node->type == DIR_T) {
-		struct index_node *curr = bst_min(node->key_index);
-		while (curr != NULL) {
-			delete_recursive(node->children_hash[curr->key].child);
-			curr = bst_next(curr);
-		}
+		for (unsigned short i = 0; i < HASH_DIMENSION; i++)
+			if (node->children_hash[i].child != NULL)
+				delete_recursive(node->children_hash[i].child);
 	}
 	free(node->content);
 	free (node->children_hash);
-	bst_destroy(node->key_index);
 	free(node);
 	total_resources--;
 }
@@ -486,8 +400,8 @@ char *reconstruct_path(struct node *node) {     // O(pathlen)
 	if (path_buffer_size < buffer_size || path_buffer == NULL) {
 		path_buffer_size = buffer_size;
 		path_buffer = (char *)realloc(path_buffer, path_buffer_size);
-		/* $$$ if (path_buffer == NULL)
-			return NULL;*/
+		if (path_buffer == NULL)
+			exit(0);
 	}
 	strcat(new_name, "/");
 	strcat(new_name, node->name);
@@ -497,25 +411,22 @@ char *reconstruct_path(struct node *node) {     // O(pathlen)
 }
 
 
-void find_recursive(struct node *node, char *name, unsigned long long *index, char **results) {      // O(found * pathlen + total resources)
+void find_recursive(struct node *node, char *name, struct bst_node **bst_root) {      // O(found * pathlen + total resources)
 	if (node != NULL) {
 		if (strcmp(name, node->name) == 0) {
 			if (path_buffer != NULL)
 				buffer_zero(path_buffer, path_buffer_size);
-			results[*index] = (char *)calloc(max_level * MAX_NAME_LEN, sizeof(char));
-			if (results[*index] == NULL) {
-				puts("no");
-				return;
-			}
-			strcpy(results[*index], reconstruct_path(node));
-			(*index)++;
+			char *temp_path = reconstruct_path(node);
+			char *path = (char *)calloc(strlen(temp_path) + 1, sizeof(char));
+			if (path == NULL)
+				exit(0);
+			strcpy(path, temp_path);
+			*bst_root = bst_insert(*bst_root, path);
 		}
 		if (node->type == DIR_T) {
-			struct index_node *curr = bst_min(node->key_index);
-			while (curr != NULL) {
-				find_recursive(node->children_hash[curr->key].child, name, index, results);
-				curr = bst_next(curr);
-			}
+			for (unsigned int i = 0; i < HASH_DIMENSION; i++)
+				if (node->children_hash[i].child != NULL)
+					find_recursive(node->children_hash[i].child, name, bst_root);
 		}
 	}
 }
@@ -581,7 +492,6 @@ void FScreate(char *tokenized_path) {       // O(path)
 		if (new_file != NULL) {
 			key = hash_insert(parent->children_hash, new_file);
 			if (KEY_IS_VALID(key)) {
-				parent->key_index = bst_insert(parent->key_index, key);
 				parent->children_no++;
 				total_resources++;
 				if (max_level < new_file->level)
@@ -589,6 +499,8 @@ void FScreate(char *tokenized_path) {       // O(path)
 				puts("ok");
 				return;
 			}
+		} else {
+			exit(0);
 		}
 	}
 	puts("no");
@@ -608,7 +520,6 @@ void FScreate_dir(char *tokenized_path) {       // O(path)
 		if (new_dir != NULL) {
 			key = hash_insert(parent->children_hash, new_dir);
 			if (KEY_IS_VALID(key)) {
-				parent->key_index = bst_insert(parent->key_index, key);
 				parent->children_no++;
 				total_resources++;
 				if (max_level < new_dir->level)
@@ -616,6 +527,8 @@ void FScreate_dir(char *tokenized_path) {       // O(path)
 				puts("ok");
 				return;
 			}
+		} else {
+			exit(0);
 		}
 	}
 	puts("no");
@@ -669,7 +582,6 @@ void FSdelete(char *tokenized_path) {     // O(path)
 			if (node->children_no == 0 && path_level(tokenized_path) == node->level) {
 				key = hash_delete(parent->children_hash, filename, 1);
 				if (KEY_IS_VALID(key)) {
-					parent->key_index = bst_delete(parent->key_index, key);
 					parent->children_no--;
 					puts("ok");
 					return;
@@ -696,7 +608,6 @@ void FSdelete_r(char *tokenized_path) {       // O(# children)
 			parent = node->parent;
 			key = hash_delete(parent->children_hash, filename, 0);
 			if (KEY_IS_VALID(key)) {
-				parent->key_index = bst_delete(parent->key_index, key);
 				parent->children_no--;
 			}
 			delete_recursive(node);
@@ -709,18 +620,13 @@ void FSdelete_r(char *tokenized_path) {       // O(# children)
 
 
 void FSfind(char *name) {       // O(# total resources + (found resources)^2)
-	unsigned long long index = 0;
-	char *results[total_resources];
-	find_recursive(root, name, &index, results);
-	if (index == 0)
+	struct bst_node *bst_root = NULL;
+	find_recursive(root, name, &bst_root);
+	if (bst_root == NULL)
 		puts("no");
-	else {
-		quicksort(results, 0, index - 1);
-		for (unsigned long long i = 0; i < index; i++)
-			printf("ok %s\n", results[i]);
-	}
-	for (unsigned long long i = 0; i < index; i++)
-		free(results[i]);
+	else
+		bst_in_order_print(bst_root);
+	bst_destroy(bst_root);
 }
 
 
@@ -751,7 +657,7 @@ int main(int argc, char *argv[]) {
 	unsigned char verbose = 0;
 	buffer = (char *)calloc(buffer_size, sizeof(char));
 	if (buffer == NULL)
-		exit(EXIT_FAILURE);
+		exit(0);
 	root = dir_init(ROOT_NAME, NULL);
 	
 	if (argc >= 2) {
@@ -767,12 +673,14 @@ int main(int argc, char *argv[]) {
 		// MARK: Read
 		command = path = content = NULL;
 		buffer = read_from_stdin();
-		if (buffer == NULL || STOP_READING || buffer[0] == '\0')
+		if (buffer == NULL)
+			exit(0);
+		else if (STOP_READING || buffer[0] == '\0')
 			break;
 		
 		// MARK: Replace spaces with nulls throughout the array (except for content part)
 		for (unsigned short i = 0; i < buffer_size && buffer[i] != '"'; i++) {      // walk through the whole array or just until the start of the <content> part (if present)
-			if (buffer[i] == ' ')
+			if (buffer[i] == ' ' || buffer[i] == '\t')
 				buffer[i] = '\0';
 		}
 		
