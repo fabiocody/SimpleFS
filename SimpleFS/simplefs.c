@@ -41,12 +41,7 @@ struct node {
 	unsigned short level;
 	char *content;
 	struct node *parent;
-	struct bucket *children_hash;
-};
-
-struct bucket {
-	int key;
-	struct node *child;
+	struct node **children_hash;
 };
 
 
@@ -101,15 +96,12 @@ unsigned int double_hash(char *string, unsigned int step) {		// O(1)
 }
 
 
-int hash_insert(struct bucket *hash_table, struct node *node) {     // O(HASH_DIMENSION) ≈ O(k)
-	unsigned int orig_key = double_hash(node->name, 0);
-	int key = orig_key;
+int hash_insert(struct node **hash_table, struct node *node) {     // O(HASH_DIMENSION) ≈ O(k)
+	int key;
 	for (unsigned int i = 0; i < HASH_DIMENSION; i++) {
-		if (i > 0)
-			key = double_hash(node->name, i);
-		if (KEY_IS_INVALID(hash_table[key].key)) {
-			hash_table[key].child = node;
-			hash_table[key].key = orig_key;
+		key = double_hash(node->name, i);
+		if (hash_table[key] == NULL) {
+			hash_table[key] = node;
 			return key;     // SUCCESS
 		}
 	}
@@ -117,45 +109,38 @@ int hash_insert(struct bucket *hash_table, struct node *node) {     // O(HASH_DI
 }
 
 
-int hash_lookup(struct bucket *hash_table, char *string) {      // O(HASH_DIMENSION) ≈ O(k)
+int hash_lookup(struct node **hash_table, char *string) {      // O(HASH_DIMENSION) ≈ O(k)
 	int key;
 	for (unsigned int i = 0; i < HASH_DIMENSION; i++) {
 		key = double_hash(string, i);
-		if (hash_table[key].key == INVALID_KEY)
-			break;
-		if (hash_table[key].key != TOMBSTONE)
-			if (strcmp(hash_table[key].child->name, string) == 0)
+		if (hash_table[key] != NULL)
+			if (strcmp(hash_table[key]->name, string) == 0)
 				return key;
 	}
 	return INVALID_KEY;
 }
 
 
-int hash_delete(struct bucket *hash_table, char *string, unsigned char freeup_element) {      // O(HASH_DIMENSION) ≈ O(k)
+int hash_delete(struct node **hash_table, char *string, unsigned char freeup_element) {      // O(HASH_DIMENSION) ≈ O(k)
 	int key = hash_lookup(hash_table, string);
 	if (KEY_IS_VALID(key)) {
-		hash_table[key].key = TOMBSTONE;
 		if (freeup_element) {
-			struct node *node = hash_table[key].child;
+			struct node *node = hash_table[key];
 			free(node->content);
 			free (node->children_hash);
 			free(node->name);
 			free(node);
 			total_resources--;
 		}
-		hash_table[key].child = NULL;
+		hash_table[key] = NULL;
 		return key;
 	}
 	return INVALID_KEY;
 }
 
 
-struct bucket *build_hash_table() {     // O(1)
-	struct bucket *hash_table = (struct bucket *)calloc(HASH_DIMENSION, sizeof(struct bucket));
-	if (hash_table == NULL)
-		return NULL;
-	for (unsigned int i = 0; i < HASH_DIMENSION; i++)
-		hash_table[i].key = INVALID_KEY;
+struct node **build_hash_table() {     // O(1)
+	struct node **hash_table = (struct node **)calloc(HASH_DIMENSION, sizeof(struct node *));
 	return hash_table;
 }
 
@@ -356,7 +341,7 @@ struct node *get_child(struct node* node, char *filename) {     // O(k)
 		return NULL;
 	int key = hash_lookup(node->children_hash, filename);
 	if (KEY_IS_VALID(key))
-		return node->children_hash[key].child;
+		return node->children_hash[key];
 	else
 		return NULL;
 }
@@ -396,8 +381,8 @@ struct node *walk(char *tokenized_path) {       // O(pathlen)
 void delete_recursive(struct node *node) {      // O(children number)
 	if (node->type == DIR_T) {
 		for (unsigned short i = 0; i < HASH_DIMENSION; i++)
-			if (node->children_hash[i].child != NULL)
-				delete_recursive(node->children_hash[i].child);
+			if (node->children_hash[i] != NULL)
+				delete_recursive(node->children_hash[i]);
 	}
 	free(node->content);
 	free(node->children_hash);
@@ -437,8 +422,8 @@ void find_recursive(struct node *node, char *name, struct bst_node **bst_root) {
 		}
 		if (node->type == DIR_T) {
 			for (unsigned int i = 0; i < HASH_DIMENSION; i++)
-				if (node->children_hash[i].child != NULL)
-					find_recursive(node->children_hash[i].child, name, bst_root);
+				if (node->children_hash[i] != NULL)
+					find_recursive(node->children_hash[i], name, bst_root);
 		}
 	}
 }
