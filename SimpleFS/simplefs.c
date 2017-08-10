@@ -157,7 +157,7 @@ struct bst_node *bst_insert(struct bst_node *root, char *path) {
 	struct bst_node *curr = root;
 	new_node = (struct bst_node *)calloc(1, sizeof(struct bst_node));
 	if (new_node == NULL)
-		exit(0);
+		exit(EXIT_FAILURE);
 	new_node->path = path;
 	while (curr != NULL) {
 		prev = curr;
@@ -262,13 +262,13 @@ struct node *file_init(char *tokenized_path, struct node *parent) {       // O(1
 	if (filename == NULL) {
 		new_file->name = (char *)calloc(strlen("tombstone") + 1, sizeof(char));
 		if (new_file->name == NULL)
-			exit(0);
+			exit(EXIT_FAILURE);
 		strcpy(new_file->name, "tombstone");
 	}
 	else {
 		new_file->name = (char *)calloc(strlen(filename) + 1, sizeof(char));
 		if (new_file->name == NULL)
-			exit(0);
+			exit(EXIT_FAILURE);
 		strcpy(new_file->name, filename);
 	}
 	new_file->children_no = 0;
@@ -290,12 +290,12 @@ struct node *dir_init(char *tokenized_path, struct node *parent) {        // O(1
 	if (filename == NULL) {
 		new_dir->name = (char *)calloc(2, sizeof(char));
 		if (new_dir->name == NULL)
-			exit(0);
+			exit(EXIT_FAILURE);
 		strcpy(new_dir->name, "");
 	} else {
 		new_dir->name = (char *)calloc(strlen(filename) + 1, sizeof(char));
 		if (new_dir->name == NULL)
-			exit(0);
+			exit(EXIT_FAILURE);
 		strcpy(new_dir->name, filename);
 	}
 	new_dir->children_no = 0;
@@ -306,7 +306,7 @@ struct node *dir_init(char *tokenized_path, struct node *parent) {        // O(1
 		new_dir->level = 0;
 	new_dir->children_hash = build_hash_table();
 	if (new_dir->children_hash == NULL)
-		exit(42);
+		exit(EXIT_FAILURE);
 	return new_dir;
 }
 
@@ -411,7 +411,7 @@ char *reconstruct_path(struct node *node) {     // O(pathlen)
 		path_buffer_size = buffer_size;
 		path_buffer = (char *)realloc(path_buffer, path_buffer_size);
 		if (path_buffer == NULL)
-			exit(0);
+			exit(EXIT_FAILURE);
 	}
 	strcat(new_name, "/");
 	strcat(new_name, node->name);
@@ -429,7 +429,7 @@ void find_recursive(struct node *node, char *name, struct bst_node **bst_root) {
 			char *temp_path = reconstruct_path(node);
 			char *path = (char *)calloc(strlen(temp_path) + 1, sizeof(char));
 			if (path == NULL)
-				exit(0);
+				exit(EXIT_FAILURE);
 			strcpy(path, temp_path);
 			*bst_root = bst_insert(*bst_root, path);
 		}
@@ -510,7 +510,7 @@ void FScreate(char *tokenized_path) {       // O(path)
 				return;
 			}
 		} else {
-			exit(0);
+			exit(EXIT_FAILURE);
 		}
 	}
 	puts("no");
@@ -538,7 +538,7 @@ void FScreate_dir(char *tokenized_path) {       // O(path)
 				return;
 			}
 		} else {
-			exit(0);
+			exit(EXIT_FAILURE);
 		}
 	}
 	puts("no");
@@ -663,7 +663,7 @@ int main(int argc, char *argv[]) {
 	unsigned char verbose = 0;
 	buffer = (char *)calloc(buffer_size, sizeof(char));
 	if (buffer == NULL)
-		exit(0);
+		exit(EXIT_FAILURE);
 	root = dir_init(ROOT_NAME, NULL);
 	tombstone = file_init("tombstone", NULL);
 	
@@ -682,7 +682,7 @@ int main(int argc, char *argv[]) {
 		command = path = content = NULL;
 		buffer = read_from_stdin();
 		if (buffer == NULL)
-			exit(0);
+			exit(EXIT_FAILURE);
 		else if (STOP_READING || buffer[0] == '\0')
 			break;
 		
