@@ -62,7 +62,6 @@ char *buffer = NULL;
 size_t buffer_size = 1024;
 char *path_buffer = NULL;
 size_t path_buffer_size = 1024;
-unsigned long long total_resources = 1;
 unsigned int max_level = 0;
 size_t pathstrlen;
 struct node *tombstone;
@@ -132,14 +131,13 @@ int hash_delete(struct node **hash_table, char *string, unsigned char freeup_ele
 			free (hash_table[key]->children_hash);
 			free(hash_table[key]->name);
 			free(hash_table[key]);
-			total_resources--;
 		}
 		hash_table[key] = tombstone;
 		return key;
 	}
 	return INVALID_KEY;
 }
-
+
 
 struct node **build_hash_table() {     // O(1)
 	struct node **hash_table = (struct node **)calloc(HASH_DIMENSION, sizeof(struct node *));
@@ -401,7 +399,6 @@ void delete_recursive(struct node *node) {      // O(children number)
 	free(node->children_hash);
 	free(node->name);
 	free(node);
-	total_resources--;
 }
 
 
@@ -503,7 +500,6 @@ void FScreate(char *tokenized_path) {       // O(path)
 			key = hash_insert(parent->children_hash, new_file);
 			if (KEY_IS_VALID(key)) {
 				parent->children_no++;
-				total_resources++;
 				if (max_level < new_file->level)
 					max_level = new_file->level;
 				puts("ok");
@@ -531,7 +527,6 @@ void FScreate_dir(char *tokenized_path) {       // O(path)
 			key = hash_insert(parent->children_hash, new_dir);
 			if (KEY_IS_VALID(key)) {
 				parent->children_no++;
-				total_resources++;
 				if (max_level < new_dir->level)
 					max_level = new_dir->level;
 				puts("ok");
