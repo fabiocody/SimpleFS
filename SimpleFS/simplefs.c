@@ -137,7 +137,7 @@ int hash_delete(struct node **hash_table, char *string, unsigned char freeup_ele
 	}
 	return INVALID_KEY;
 }
-
+
 
 struct node **build_hash_table() {     // O(1)
 	struct node **hash_table = (struct node **)calloc(HASH_DIMENSION, sizeof(struct node *));
@@ -147,7 +147,7 @@ struct node **build_hash_table() {     // O(1)
 
 
 
-// MARK: - Binary Search Tree
+// MARK: - BST functions
 
 struct bst_node *bst_insert(struct bst_node *root, char *path) {
 	struct bst_node *new_node = NULL;
