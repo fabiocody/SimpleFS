@@ -23,6 +23,7 @@
 /* End PBXCopyFilesBuildPhase section */
 
 /* Begin PBXFileReference section */
+		E54D112C1F59692700C7BDD8 /* TRASH */ = {isa = PBXFileReference; lastKnownFileType = text; path = TRASH; sourceTree = "<group>"; };
 		E55BDCF71EE85E09003C65D8 /* SimpleFS */ = {isa = PBXFileReference; explicitFileType = "compiled.mach-o.executable"; includeInIndex = 0; path = SimpleFS; sourceTree = BUILT_PRODUCTS_DIR; };
 		E5D7A3A51EE8632A00716AF4 /* simplefs.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; path = simplefs.c; sourceTree = "<group>"; usesTabs = 1; };
 /* End PBXFileReference section */
@@ -59,6 +60,7 @@
 			isa = PBXGroup;
 			children = (
 				E5D7A3A51EE8632A00716AF4 /* simplefs.c */,
+				E54D112C1F59692700C7BDD8 /* TRASH */,
 			);
 			path = SimpleFS;
 			sourceTree = "<group>";

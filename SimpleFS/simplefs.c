@@ -27,7 +27,7 @@
 
 
 // MARK: Behavior defines
-#define AVALANCHE
+//#define AVALANCHE
 //#define TEST
 //#define CLEANUP
 
@@ -76,13 +76,6 @@ unsigned int djb2(char *string) {       // O(1), because strings have finite len
 	int c;
 	while ((c = *string++))     // exit when *str == '\0'
 		key = ((key << 5) + key) + c;
-	#ifdef AVALANCHE
-	key = (key+0x479ab41d) + (key<<8);
-	key = (key^0xe4aa10ce) ^ (key>>5);
-	key = (key+0x9942f0a6) - (key<<14);
-	key = (key^0x5aedd67d) ^ (key>>3);
-	key = (key+0x17bea992) + (key<<7);
-	#endif // AVALANCHE
 	return key;
 }
 
