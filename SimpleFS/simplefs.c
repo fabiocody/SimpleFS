@@ -28,7 +28,7 @@
 
 // MARK: Behavior defines
 //#define AVALANCHE
-#define TEST
+//#define TEST
 //#define CLEANUP
 
 
@@ -197,12 +197,12 @@ char *get_next_token(char *tokenized_path) {        // O(1)
 
 char *get_filename(char *tokenized_path) {      // O(pathlen)
 	char *token;
-	if (pathstrlen > 64) {
+	/*if (pathstrlen > 64) {
 		token = &tokenized_path[pathstrlen - 1];
 		while (*(--token));
 		token++;
 		return token;
-	} else if (pathstrlen > 0) {
+	} else if (pathstrlen > 0) {*/
 		token = get_next_token(tokenized_path);
 		char *prev_token = NULL;
 		while (token != NULL) {
@@ -210,9 +210,7 @@ char *get_filename(char *tokenized_path) {      // O(pathlen)
 			token = get_next_token(token);
 		}
 		return prev_token;
-	} else {
-		return NULL;
-	}
+	//}
 }
 
 
@@ -221,19 +219,19 @@ char *get_parent_name(char *tokenized_path) {       // O(pathlen)
 	char *filename = get_filename(tokenized_path);
 	if (token == filename)
 		return "";
-	if (pathstrlen > 64) {
+	/*if (pathstrlen > 64) {
 		token = &tokenized_path[pathstrlen - strlen(filename) - 1];
 		while (*(--token));
 		token++;
 		return token;
-	} else {
+	} else {*/
 		char *prev_token = NULL;
 		while (token != filename) {
 			prev_token = token;
 			token = get_next_token(token);
 		}
 		return prev_token;
-	}
+	//}
 }
 
 
@@ -670,7 +668,8 @@ int main(int argc, char *argv[]) {
 			buffer[i] = 0;
 		}
 		
-		if (path != NULL) pathstrlen = strlen(path);
+		/*if (path != NULL)
+			pathstrlen = strlen(path);*/
 		
 		// MARK: Switch
 		if (strcmp(command, "create") == 0) {
