@@ -634,40 +634,34 @@ int main(int argc, char *argv[]) {
 	// MARK: Initializations
 	char ROOT_NAME[3] = "/";
 	char *command = NULL, *path = NULL, *content = NULL;
-	unsigned char verbose = 0;
+	
 	buffer = (char *)calloc(buffer_size, sizeof(char));
 	if (buffer == NULL)
 		exit(EXIT_FAILURE);
 	root = dir_init(ROOT_NAME, NULL);
 	tombstone = file_init("tombstone", NULL);
 	
-	if (argc >= 2) {
-		if (strcmp(argv[1], "-v") == 0)
-			verbose = 1;
-	}
-	
-	if (verbose) printf("Root addr = %p\n\n", root);
-	
 	// MARK: Main Loop
 	while (1) {
 		
-		// MARK: Read
+		// MARK: Get input
 		path = content = NULL;
 		command = buffer = read_from_stdin();
 		
+		// Prepare input for handling and set path pointer
 		size_t i = 0;
 		for (; i < buffer_size && buffer[i] != '"'; i++) {
 			if (buffer[i] == ' ' || buffer[i] == '\t' || buffer[i] == '/') {
 				buffer[i] = 0;
 				if (path == NULL) {
-					for (; i < buffer_size && (buffer[i] == ' ' || buffer[i] == '\t'); i++)
+					for (; i < buffer_size && (buffer[i] == ' ' || buffer[i] == '\t' || buffer[i] == '/'); i++)
 						buffer[i] = 0;
 					path = &buffer[i];
 				}
 			}
 		}
 		
-		// Remove quotes
+		// If a content part is present, remove quotes and set content pointer
 		if (buffer[i] == '"') {
 			buffer[i] = 0;
 			content = &buffer[i + 1];
@@ -675,48 +669,7 @@ int main(int argc, char *argv[]) {
 			buffer[i] = 0;
 		}
 		
-		pathstrlen = strlen(path);
-		
-		/*// MARK: Replace spaces with nulls throughout the array (except for content part)
-		for (unsigned short i = 0; i < buffer_size && buffer[i] != '"'; i++) {      // walk through the whole array or just until the start of the <content> part (if present)
-			if (buffer[i] == ' ' || buffer[i] == '\t')
-				buffer[i] = '\0';
-		}
-		
-		// MARK: Set command pointer
-		command = buffer;
-		
-		// MARK: Set path pointer
-		for (unsigned short i = 0; i < buffer_size; i++) {
-			if (buffer[i] == '\0') {
-				for (; buffer[i] == '\0'; i++);
-				path = &buffer[i];
-				break;
-			}
-		}
-		
-		// MARK: Set content pointer and remove quotes
-		for (unsigned int i = 0; i < buffer_size - strlen(command) - 1; i++) {
-			if (path[i] == '\0' && path[i + 1] == '"') {
-				path[i + 1] = '\0';
-				content = &path[i + 2];
-				for (unsigned int j = 0; j < buffer_size - strlen(command) - pathstrlen - 2; j++) {
-					if (content[j] == '"')
-						content[j] = '\0';
-				}
-				break;
-			}
-		}*/
-		
-		// MARK: Debug prints
-		if (verbose) {
-			printf("command = %s\n", command);
-			printf("path = %s\n", path);
-			printf("content = %s\n", content);
-		}
-		
-		// MARK: Tokenize path
-		prepare_path_tokens(path);
+		if (path != NULL) pathstrlen = strlen(path);
 		
 		// MARK: Switch
 		if (strcmp(command, "create") == 0) {
@@ -744,8 +697,6 @@ int main(int argc, char *argv[]) {
 		} else {
 			puts("no");
 		}
-		
-		if (verbose) puts("");
 		
 	}
 	
