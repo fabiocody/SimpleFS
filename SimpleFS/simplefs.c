@@ -28,7 +28,7 @@
 
 // MARK: Behavior defines
 //#define AVALANCHE
-//#define TEST
+#define TEST
 //#define CLEANUP
 
 
@@ -432,8 +432,8 @@ void walk_recursive(struct node *node) {        // O(children number)
 		printf("%p - %s\n", node, reconstruct_path(node));
 	if (node->type == DIR_T) {
 		for (unsigned int i = 0; i < HASH_DIMENSION; i++)
-			if (node->children_hash[i].child != NULL)
-				walk_recursive(node->children_hash[i].child);
+			if (node->children_hash[i] != NULL)
+				walk_recursive(node->children_hash[i]);
 	}
 }
 #else
@@ -451,8 +451,8 @@ void ls(char *tokenized_path) {
 	if (node->type == FILE_T)
 		return;
 	for (unsigned short i = 0; i < HASH_DIMENSION; i++) {
-		if (node->children_hash[i].child != NULL)
-			printf("%u - %p - %s\n", node->children_hash[i].key, node->children_hash[i].child, node->children_hash[i].child->name);
+		if (node->children_hash[i] != NULL)
+			printf("%p - %s\n", node->children_hash[i], node->children_hash[i]->name);
 	}
 	return;
 }
@@ -644,7 +644,7 @@ int main(int argc, char *argv[]) {
 	// MARK: Main Loop
 	while (1) {
 		
-		// MARK: Get input
+		// Get input
 		path = content = NULL;
 		command = buffer = read_from_stdin();
 		
@@ -654,9 +654,10 @@ int main(int argc, char *argv[]) {
 			if (buffer[i] == ' ' || buffer[i] == '\t' || buffer[i] == '/') {
 				buffer[i] = 0;
 				if (path == NULL) {
-					for (; i < buffer_size && (buffer[i] == ' ' || buffer[i] == '\t' || buffer[i] == '/'); i++)
+					for (; i < buffer_size-1 && (buffer[i+1] == ' ' || buffer[i+1] == '\t' || buffer[i+1] == '/'); i++)
 						buffer[i] = 0;
 					path = &buffer[i];
+					buffer[i] = 0;
 				}
 			}
 		}
