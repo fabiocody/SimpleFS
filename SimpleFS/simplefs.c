@@ -16,6 +16,7 @@
 #define MAX_NAME_LEN 256
 #define MAX_TREE_DEPTH 255
 #define HASH_DIMENSION 1031
+#define HASH_MAGIC_NUMBER 0x1505
 #define DIR_T 0
 #define FILE_T 1
 #define INVALID_KEY -1
@@ -72,10 +73,10 @@ struct node *tombstone;
 // MARK: - Hash functions
 
 unsigned int djb2(char *string) {       // O(1), because strings have finite length (255)
-	unsigned int key = 5381;
-	int c;
-	while ((c = *string++))     // exit when *str == '\0'
-		key = ((key << 5) + key) + c;
+	unsigned int key = HASH_MAGIC_NUMBER;
+	unsigned char byte;
+	while ((byte = *string++))     // exit when *str == '\0'
+		key = ((key << 5) + key) + byte;
 	return key;
 }
 
@@ -655,7 +656,6 @@ int main(int argc, char *argv[]) {
 		exit(EXIT_FAILURE);
 	root = dir_init(ROOT_NAME, NULL);
 	tombstone = file_init("tombstone", NULL);
-	
 	
 	if (argc >= 2) {
 		if (strcmp(argv[1], "-v") == 0)
