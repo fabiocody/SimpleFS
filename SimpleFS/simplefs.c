@@ -26,7 +26,6 @@
 #define KEY_IS_VALID(key) key >= 0
 
 
-
 // MARK: Behavior defines
 //#define AVALANCHE
 //#define TEST
@@ -53,12 +52,9 @@ struct bst_node {
 };
 
 
-
-
 // MARK: - Global Variables
 
 struct node *root = NULL;
-unsigned char STOP_READING = 0;
 char *buffer = NULL;
 size_t buffer_size = 1024;
 char *path_buffer = NULL;
@@ -66,8 +62,6 @@ size_t path_buffer_size = 1024;
 unsigned int max_level = 0;
 size_t pathstrlen;
 struct node *tombstone;
-
-
 
 
 // MARK: - Hash functions
@@ -137,8 +131,6 @@ struct node **build_hash_table() {     // O(1)
 	struct node **hash_table = (struct node **)calloc(HASH_DIMENSION, sizeof(struct node *));
 	return hash_table;
 }
-
-
 
 
 // MARK: - BST functions
@@ -318,25 +310,21 @@ void buffer_zero(char *buffer, size_t size) {
 
 
 char *read_from_stdin(void) {       // O(strlen(input))
-	unsigned int i;
+	unsigned int i = 0;
 	buffer_zero(buffer, buffer_size);
-	i = 0;
 	while (1) {
 		for (; i < buffer_size - 4; i++) {
 			buffer[i] = getc(stdin);
 			if (buffer[i] == '\n') {
 				buffer[i] = buffer[i + 1] = '\0';
 				return buffer;
-			} else if (buffer[i] == EOF) {
-				STOP_READING = 1;
-				return buffer;
 			}
 		}
 		if (buffer[i - 1] != '\n') {
-			buffer_size += 512;
+			buffer_size *= 2;
 			buffer = (char *)realloc(buffer, buffer_size * sizeof(char));
 			if (buffer == NULL)
-				return NULL;
+				exit(EXIT_FAILURE);
 		}
 	}
 }
@@ -453,8 +441,6 @@ void walk_recursive(struct node *node) {
 	puts("no");
 }
 #endif // TEST
-
-
 
 
 // MARK: - Functions (FS commands)
@@ -641,8 +627,6 @@ void node_level(char *tokenized_path) {
 #endif // TEST
 
 
-
-
 // MARK: - Main
 
 int main(int argc, char *argv[]) {
@@ -670,10 +654,6 @@ int main(int argc, char *argv[]) {
 		// MARK: Read
 		command = path = content = NULL;
 		buffer = read_from_stdin();
-		if (buffer == NULL)
-			exit(EXIT_FAILURE);
-		else if (STOP_READING || buffer[0] == '\0')
-			break;
 		
 		// MARK: Replace spaces with nulls throughout the array (except for content part)
 		for (unsigned short i = 0; i < buffer_size && buffer[i] != '"'; i++) {      // walk through the whole array or just until the start of the <content> part (if present)
@@ -750,7 +730,7 @@ int main(int argc, char *argv[]) {
 	}
 	
 	#ifdef CLEANUP
-	BUFFER_ZERO(buffer, buffer_size);
+	buffer_zero(buffer, buffer_size);
 	strcpy(buffer, "/");
 	prepare_path_tokens(buffer);
 	FSdelete_r(buffer);
