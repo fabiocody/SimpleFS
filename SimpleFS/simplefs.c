@@ -652,10 +652,32 @@ int main(int argc, char *argv[]) {
 	while (1) {
 		
 		// MARK: Read
-		command = path = content = NULL;
-		buffer = read_from_stdin();
+		path = content = NULL;
+		command = buffer = read_from_stdin();
 		
-		// MARK: Replace spaces with nulls throughout the array (except for content part)
+		size_t i = 0;
+		for (; i < buffer_size && buffer[i] != '"'; i++) {
+			if (buffer[i] == ' ' || buffer[i] == '\t' || buffer[i] == '/') {
+				buffer[i] = 0;
+				if (path == NULL) {
+					for (; i < buffer_size && (buffer[i] == ' ' || buffer[i] == '\t'); i++)
+						buffer[i] = 0;
+					path = &buffer[i];
+				}
+			}
+		}
+		
+		// Remove quotes
+		if (buffer[i] == '"') {
+			buffer[i] = 0;
+			content = &buffer[i + 1];
+			for (; i < buffer_size && buffer[i] != '"'; i++);
+			buffer[i] = 0;
+		}
+		
+		pathstrlen = strlen(path);
+		
+		/*// MARK: Replace spaces with nulls throughout the array (except for content part)
 		for (unsigned short i = 0; i < buffer_size && buffer[i] != '"'; i++) {      // walk through the whole array or just until the start of the <content> part (if present)
 			if (buffer[i] == ' ' || buffer[i] == '\t')
 				buffer[i] = '\0';
@@ -673,8 +695,6 @@ int main(int argc, char *argv[]) {
 			}
 		}
 		
-		pathstrlen = strlen(path);
-		
 		// MARK: Set content pointer and remove quotes
 		for (unsigned int i = 0; i < buffer_size - strlen(command) - 1; i++) {
 			if (path[i] == '\0' && path[i + 1] == '"') {
@@ -686,7 +706,7 @@ int main(int argc, char *argv[]) {
 				}
 				break;
 			}
-		}
+		}*/
 		
 		// MARK: Debug prints
 		if (verbose) {
