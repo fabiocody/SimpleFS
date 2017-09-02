@@ -303,7 +303,7 @@ struct node *dir_init(char *tokenized_path, struct node *parent) {        // O(1
 
 
 void buffer_zero(char *buffer, size_t size) {
-	if (size % sizeof(unsigned long long) == 0) {
+	/*if (size % sizeof(unsigned long long) == 0) {
 		unsigned long long *ptr = (unsigned long long *)buffer;
 		size /= sizeof(unsigned long long);
 		for (size_t i = 0; i < size; i++)
@@ -311,7 +311,8 @@ void buffer_zero(char *buffer, size_t size) {
 	} else {
 		for (size_t i = 0; i < size; i++)
 			buffer[i] = 0;
-	}
+	}*/
+	memset(buffer, 0, size);
 }
 
 
