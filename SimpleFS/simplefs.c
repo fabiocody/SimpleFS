@@ -648,14 +648,17 @@ int main(int argc, char *argv[]) {
 		
 		// Prepare input for handling and set path pointer
 		size_t i = 0;
-		for (; i < buffer_size && buffer[i] != '"'; i++) {
+		for (; i < buffer_size && buffer[i] != '"' && buffer[i] != 0; i++) {
 			if (buffer[i] == ' ' || buffer[i] == '\t' || buffer[i] == '/') {
 				buffer[i] = 0;
 				if (path == NULL) {
-					for (; i < buffer_size-1 && (buffer[i+1] == ' ' || buffer[i+1] == '\t' || buffer[i+1] == '/'); i++)
+					do {
 						buffer[i] = 0;
+						i++;
+					} while (i < buffer_size-1 && (buffer[i+1] == ' ' || buffer[i+1] == '\t' || buffer[i+1] == '/'));
 					path = &buffer[i];
-					buffer[i] = 0;
+					if (buffer[i] == '/')
+						buffer[i] = 0;
 				}
 			}
 		}
@@ -667,9 +670,6 @@ int main(int argc, char *argv[]) {
 			for (; i < buffer_size && buffer[i] != '"'; i++);
 			buffer[i] = 0;
 		}
-		
-		/*if (path != NULL)
-			pathstrlen = strlen(path);*/
 		
 		// MARK: Switch
 		if (strcmp(command, "create") == 0) {
