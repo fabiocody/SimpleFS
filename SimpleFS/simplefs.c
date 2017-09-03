@@ -15,7 +15,7 @@
 #define MAX_CHILDREN 1024
 #define MAX_NAME_LEN 256
 #define MAX_TREE_DEPTH 255
-#define HASH_DIMENSION 1031
+#define HASH_SIZE 1031
 #define HASH_MAGIC_NUMBER 0x1505
 #define DIR_T 0
 #define FILE_T 1
@@ -62,31 +62,41 @@ size_t path_buffer_size = 1024;
 unsigned int max_level = 0;
 size_t pathstrlen;
 struct node *tombstone;
+unsigned int (*hash_function)(char *) = NULL;
 
 
 // MARK: - Hash functions
 
-unsigned int djb2(char *string) {       // O(1), because strings have finite length (255)
+/*unsigned int djb2(char *string) {       // O(1), because strings have finite length (255)
 	unsigned int key = HASH_MAGIC_NUMBER;
 	unsigned char byte;
 	while ((byte = *string++))     // exit when *str == '\0'
 		key = ((key << 5) + key) + byte;
 	return key;
+}*/
+
+
+unsigned int myhash(char *string) {
+	unsigned int key = 0x1713;
+	while (*string) {
+		key = (key << 3) ^ (key * *string++);
+	}
+	return key % HASH_SIZE;
 }
 
 
 unsigned int double_hash(char *string, unsigned int step) {		// O(1)
-	unsigned int key = djb2(string);
+	unsigned int key = hash_function(string);
 	if (step == 0)
-		return key % HASH_DIMENSION;
+		return key % HASH_SIZE;
 	else
-		return (key + step * (1 + (key % (HASH_DIMENSION - 1)))) % HASH_DIMENSION;
+		return (key + step * (1 + (key % (HASH_SIZE - 1)))) % HASH_SIZE;
 }
 
 
-int hash_insert(struct node **hash_table, struct node *node) {     // O(HASH_DIMENSION) ≈ O(k)
+int hash_insert(struct node **hash_table, struct node *node) {     // O(HASH_SIZE) ≈ O(k)
 	int key;
-	for (unsigned int i = 0; i < HASH_DIMENSION; i++) {
+	for (unsigned int i = 0; i < HASH_SIZE; i++) {
 		key = double_hash(node->name, i);
 		if (hash_table[key] == NULL || hash_table[key] == tombstone) {
 			hash_table[key] = node;
@@ -97,9 +107,9 @@ int hash_insert(struct node **hash_table, struct node *node) {     // O(HASH_DIM
 }
 
 
-int hash_lookup(struct node **hash_table, char *string) {      // O(HASH_DIMENSION) ≈ O(k)
+int hash_lookup(struct node **hash_table, char *string) {      // O(HASH_SIZE) ≈ O(k)
 	int key;
-	for (unsigned int i = 0; i < HASH_DIMENSION; i++) {
+	for (unsigned int i = 0; i < HASH_SIZE; i++) {
 		key = double_hash(string, i);
 		if (hash_table[key] == NULL)
 			break;
@@ -111,7 +121,7 @@ int hash_lookup(struct node **hash_table, char *string) {      // O(HASH_DIMENSI
 }
 
 
-int hash_delete(struct node **hash_table, char *string, unsigned char freeup_element) {      // O(HASH_DIMENSION) ≈ O(k)
+int hash_delete(struct node **hash_table, char *string, unsigned char freeup_element) {      // O(HASH_SIZE) ≈ O(k)
 	int key = hash_lookup(hash_table, string);
 	if (KEY_IS_VALID(key)) {
 		if (freeup_element) {
@@ -128,7 +138,7 @@ int hash_delete(struct node **hash_table, char *string, unsigned char freeup_ele
 
 
 struct node **build_hash_table() {     // O(1)
-	struct node **hash_table = (struct node **)calloc(HASH_DIMENSION, sizeof(struct node *));
+	struct node **hash_table = (struct node **)calloc(HASH_SIZE, sizeof(struct node *));
 	return hash_table;
 }
 
@@ -372,7 +382,7 @@ struct node *walk(char *tokenized_path) {       // O(pathlen)
 
 void delete_recursive(struct node *node) {      // O(children number)
 	if (node->type == DIR_T) {
-		for (unsigned short i = 0; i < HASH_DIMENSION; i++)
+		for (unsigned short i = 0; i < HASH_SIZE; i++)
 			if (node->children_hash[i] != NULL)
 				delete_recursive(node->children_hash[i]);
 	}
@@ -412,7 +422,7 @@ void find_recursive(struct node *node, char *name, struct bst_node **bst_root) {
 			*bst_root = bst_insert(*bst_root, path);
 		}
 		if (node->type == DIR_T) {
-			for (unsigned int i = 0; i < HASH_DIMENSION; i++)
+			for (unsigned int i = 0; i < HASH_SIZE; i++)
 				if (node->children_hash[i] != NULL)
 					find_recursive(node->children_hash[i], name, bst_root);
 		}
@@ -429,7 +439,7 @@ void walk_recursive(struct node *node) {        // O(children number)
 	else
 		printf("%p - %s\n", node, reconstruct_path(node));
 	if (node->type == DIR_T) {
-		for (unsigned int i = 0; i < HASH_DIMENSION; i++)
+		for (unsigned int i = 0; i < HASH_SIZE; i++)
 			if (node->children_hash[i] != NULL)
 				walk_recursive(node->children_hash[i]);
 	}
@@ -448,7 +458,7 @@ void ls(char *tokenized_path) {
 	struct node *node = walk(tokenized_path);
 	if (node->type == FILE_T)
 		return;
-	for (unsigned short i = 0; i < HASH_DIMENSION; i++) {
+	for (unsigned short i = 0; i < HASH_SIZE; i++) {
 		if (node->children_hash[i] != NULL)
 			printf("%p - %s\n", node->children_hash[i], node->children_hash[i]->name);
 	}
@@ -633,6 +643,7 @@ int main(int argc, char *argv[]) {
 	char ROOT_NAME[3] = "/";
 	char *command = NULL, *path = NULL, *content = NULL;
 	
+	hash_function = myhash;
 	buffer = (char *)calloc(buffer_size, sizeof(char));
 	if (buffer == NULL)
 		exit(EXIT_FAILURE);
