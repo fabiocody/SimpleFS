@@ -67,13 +67,13 @@ unsigned int (*hash_function)(char *) = NULL;
 
 // MARK: - Hash functions
 
-/*unsigned int djb2(char *string) {       // O(1), because strings have finite length (255)
+unsigned int djb2(char *string) {       // O(1), because strings have finite length (255)
 	unsigned int key = HASH_MAGIC_NUMBER;
 	unsigned char byte;
 	while ((byte = *string++))     // exit when *str == '\0'
 		key = ((key << 5) + key) + byte;
 	return key;
-}*/
+}
 
 
 unsigned int myhash(char *string) {
@@ -643,7 +643,7 @@ int main(int argc, char *argv[]) {
 	char ROOT_NAME[3] = "/";
 	char *command = NULL, *path = NULL, *content = NULL;
 	
-	hash_function = myhash;
+	hash_function = djb2;
 	buffer = (char *)calloc(buffer_size, sizeof(char));
 	if (buffer == NULL)
 		exit(EXIT_FAILURE);
