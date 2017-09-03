@@ -613,7 +613,7 @@ int main(int argc, char *argv[]) {
 			buffer[i] = 0;
 		}
 		
-		// MARK: Switch
+		// MARK: Simulated switch
 		if (strcmp(command, "create") == 0) {
 			FScreate(path);
 		} else if (strcmp(command, "create_dir") == 0) {
@@ -628,12 +628,12 @@ int main(int argc, char *argv[]) {
 			FSdelete_r(path);
 		} else if (strcmp(command, "find") == 0) {
 			FSfind(path);
+		} else if (strcmp(command, "exit") == 0) {
+			break;
 		} else if (strcmp(command, "ls") == 0) {
 			ls(path);
 		} else if (strcmp(command, "du") == 0) {
 			walk_recursive(root);
-		} else if (strcmp(command, "exit") == 0) {
-			break;
 		} else if (strcmp(command, "level") == 0) {
 			node_level(path);
 		} else {
