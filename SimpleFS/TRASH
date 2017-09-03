@@ -1,3 +1,4 @@
+AVALANCHE
 key = (key+0x479ab41d) + (key<<8);
 key = (key^0xe4aa10ce) ^ (key>>5);
 key = (key+0x9942f0a6) - (key<<14);

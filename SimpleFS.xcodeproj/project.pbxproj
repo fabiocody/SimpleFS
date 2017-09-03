@@ -7,6 +7,7 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
+		E5C857911F5C4DE900BA7AE9 /* README.md in Sources */ = {isa = PBXBuildFile; fileRef = E5C8578F1F5C4DE900BA7AE9 /* README.md */; };
 		E5D7A3A71EE8632A00716AF4 /* simplefs.c in Sources */ = {isa = PBXBuildFile; fileRef = E5D7A3A51EE8632A00716AF4 /* simplefs.c */; };
 /* End PBXBuildFile section */
 
@@ -25,6 +26,9 @@
 /* Begin PBXFileReference section */
 		E54D112C1F59692700C7BDD8 /* TRASH */ = {isa = PBXFileReference; lastKnownFileType = text; path = TRASH; sourceTree = "<group>"; };
 		E55BDCF71EE85E09003C65D8 /* SimpleFS */ = {isa = PBXFileReference; explicitFileType = "compiled.mach-o.executable"; includeInIndex = 0; path = SimpleFS; sourceTree = BUILT_PRODUCTS_DIR; };
+		E5C8578F1F5C4DE900BA7AE9 /* README.md */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = net.daringfireball.markdown; path = README.md; sourceTree = "<group>"; };
+		E5C857901F5C4DE900BA7AE9 /* Specs.pdf */ = {isa = PBXFileReference; lastKnownFileType = image.pdf; path = Specs.pdf; sourceTree = "<group>"; };
+		E5C857921F5C4E0600BA7AE9 /* .travis.yml */ = {isa = PBXFileReference; lastKnownFileType = text; path = .travis.yml; sourceTree = "<group>"; };
 		E5D7A3A51EE8632A00716AF4 /* simplefs.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; path = simplefs.c; sourceTree = "<group>"; usesTabs = 1; };
 /* End PBXFileReference section */
 
@@ -42,6 +46,9 @@
 		E55BDCEE1EE85E09003C65D8 = {
 			isa = PBXGroup;
 			children = (
+				E5C857921F5C4E0600BA7AE9 /* .travis.yml */,
+				E5C8578F1F5C4DE900BA7AE9 /* README.md */,
+				E5C857901F5C4DE900BA7AE9 /* Specs.pdf */,
 				E55BDCF91EE85E09003C65D8 /* SimpleFS */,
 				E55BDCF81EE85E09003C65D8 /* Products */,
 			);
@@ -123,6 +130,7 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				E5C857911F5C4DE900BA7AE9 /* README.md in Sources */,
 				E5D7A3A71EE8632A00716AF4 /* simplefs.c in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
