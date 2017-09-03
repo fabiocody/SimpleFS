@@ -1,3 +1,5 @@
 language: c
-compiler: gcc
-script: gcc -DEVAL -static -std=c99 -O2 -lm SimpleFS/simplefs.c
+compiler:
+	- gcc
+	- clang
+script: $(CC) -DEVAL -static -std=c99 -O2 -lm SimpleFS/simplefs.c
