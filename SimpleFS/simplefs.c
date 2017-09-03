@@ -16,11 +16,9 @@
 #define MAX_NAME_LEN 256
 #define MAX_TREE_DEPTH 255
 #define HASH_SIZE 1031
-#define HASH_MAGIC_NUMBER 0x1505
 #define DIR_T 0
 #define FILE_T 1
 #define INVALID_KEY -1
-#define TOMBSTONE -2
 // MARK: Macro
 #define KEY_IS_INVALID(key) key < 0
 #define KEY_IS_VALID(key) key >= 0
