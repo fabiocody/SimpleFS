@@ -643,7 +643,7 @@ int main(int argc, char *argv[]) {
 	char ROOT_NAME[3] = "/";
 	char *command = NULL, *path = NULL, *content = NULL;
 	
-	hash_function = djb2;
+	hash_function = myhash;
 	buffer = (char *)calloc(buffer_size, sizeof(char));
 	if (buffer == NULL)
 		exit(EXIT_FAILURE);
