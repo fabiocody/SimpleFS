@@ -7,7 +7,6 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
-		E5C857911F5C4DE900BA7AE9 /* README.md in Sources */ = {isa = PBXBuildFile; fileRef = E5C8578F1F5C4DE900BA7AE9 /* README.md */; };
 		E5D7A3A71EE8632A00716AF4 /* simplefs.c in Sources */ = {isa = PBXBuildFile; fileRef = E5D7A3A51EE8632A00716AF4 /* simplefs.c */; };
 /* End PBXBuildFile section */
 
@@ -130,7 +129,6 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
-				E5C857911F5C4DE900BA7AE9 /* README.md in Sources */,
 				E5D7A3A71EE8632A00716AF4 /* simplefs.c in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
