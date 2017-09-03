@@ -81,7 +81,7 @@ unsigned int myhash(char *string) {
 	while (*string) {
 		key = (key << 3) ^ (key * *string++);
 	}
-	return key % HASH_SIZE;
+	return key;
 }
 
 
