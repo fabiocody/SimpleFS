@@ -33,13 +33,13 @@
 
 struct node {
 	// Node of the main tree structure
-	unsigned char type;
-	char *name;
-	unsigned short children_no;
-	unsigned short level;
-	char *content;
-	struct node *parent;
-	struct node **children_hash;
+	unsigned char type;					// Type of the node (file or directory)
+	char *name;							// Filename
+	unsigned short n_children;			// Number of children
+	unsigned short level;				// Level of the node in the tree
+	char *content;						// Content of the file (used only if the node is a file)
+	struct node *parent;				// Pointer to the parent node
+	struct node **children_hash;		// Array of pointers to struct node used as hash table for children (used only if the node is a directory)
 };
 
 
@@ -226,7 +226,7 @@ struct node *file_init(char *tokenized_path, struct node *parent) {       // O(1
 		if (new_file->name == NULL) exit(EXIT_FAILURE);
 		strcpy(new_file->name, filename);
 	}
-	new_file->children_no = 0;
+	new_file->n_children = 0;
 	if (parent) new_file->level = parent->level + 1;
 	else new_file->level = 0;
 	new_file->parent = parent;
@@ -249,7 +249,7 @@ struct node *dir_init(char *tokenized_path, struct node *parent) {        // O(1
 		if (new_dir->name == NULL) exit(EXIT_FAILURE);
 		strcpy(new_dir->name, filename);
 	}
-	new_dir->children_no = 0;
+	new_dir->n_children = 0;
 	new_dir->parent = parent;
 	if (parent) new_dir->level = parent->level + 1;
 	else new_dir->level = 0;
@@ -407,6 +407,7 @@ void walk_recursive(struct node *node) {
 void ls(char *tokenized_path) {
 	// JUST FOR TESTING
 	// If the resource specified by the path is a directory, print all its children
+	// If no path is provided, then print all root's content
 	struct node *node = walk(tokenized_path);
 	if (node->type == FILE_T)
 		return;
@@ -452,12 +453,12 @@ void FScreate(char *tokenized_path) {       // O(path)
 	struct node *new_file = NULL;
 	char *parent_name = get_parent_name(tokenized_path);		// O(path)
 	int key;
-	if (strcmp(parent_name, parent->name) == 0 && parent->type == DIR_T && parent->level < MAX_TREE_DEPTH - 1 && parent->children_no < MAX_CHILDREN) {
+	if (strcmp(parent_name, parent->name) == 0 && parent->type == DIR_T && parent->level < MAX_TREE_DEPTH - 1 && parent->n_children < MAX_CHILDREN) {
 		new_file = file_init(tokenized_path, parent);
 		if (new_file != NULL) {
 			key = hash_insert(parent->children_hash, new_file);
 			if (KEY_IS_VALID(key)) {
-				parent->children_no++;
+				parent->n_children++;
 				if (max_level < new_file->level) max_level = new_file->level;
 				puts("ok");
 				return;
@@ -475,12 +476,12 @@ void FScreate_dir(char *tokenized_path) {       // O(path)
 	struct node *new_dir = NULL;
 	char *parent_name = get_parent_name(tokenized_path);		// O(path)
 	int key;
-	if (parent != NULL && strcmp(parent_name, parent->name) == 0 && parent->type == DIR_T && parent->level < MAX_TREE_DEPTH - 1 && parent->children_no < MAX_CHILDREN) {
+	if (parent != NULL && strcmp(parent_name, parent->name) == 0 && parent->type == DIR_T && parent->level < MAX_TREE_DEPTH - 1 && parent->n_children < MAX_CHILDREN) {
 		new_dir = dir_init(tokenized_path, parent);
 		if (new_dir != NULL) {
 			key = hash_insert(parent->children_hash, new_dir);
 			if (KEY_IS_VALID(key)) {
-				parent->children_no++;
+				parent->n_children++;
 				if (max_level < new_dir->level) max_level = new_dir->level;
 				puts("ok");
 				return;
@@ -527,11 +528,11 @@ void FSdelete(char *tokenized_path) {     // O(path)
 	struct node *parent = NULL;
 	char *filename = get_filename(tokenized_path);		// O(path)
 	int key;
-	if (node != NULL && strcmp(filename, node->name) == 0 && node->children_no == 0 && path_level(tokenized_path) == node->level) {
+	if (node != NULL && strcmp(filename, node->name) == 0 && node->n_children == 0 && path_level(tokenized_path) == node->level) {
 		parent = node->parent;
 		key = hash_delete(parent->children_hash, filename, 1);
 		if (KEY_IS_VALID(key)) {
-			parent->children_no--;
+			parent->n_children--;
 			puts("ok");
 			return;
 		}
@@ -550,7 +551,7 @@ void FSdelete_r(char *tokenized_path) {       // O(# children)
 		parent = node->parent;
 		key = hash_delete(parent->children_hash, filename, 0);
 		if (KEY_IS_VALID(key))
-			parent->children_no--;
+			parent->n_children--;
 		delete_recursive(node);
 		puts("ok");
 		return;

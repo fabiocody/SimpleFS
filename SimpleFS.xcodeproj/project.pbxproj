@@ -28,7 +28,7 @@
 		E5C8578F1F5C4DE900BA7AE9 /* README.md */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = net.daringfireball.markdown; path = README.md; sourceTree = "<group>"; };
 		E5C857901F5C4DE900BA7AE9 /* Specs.pdf */ = {isa = PBXFileReference; lastKnownFileType = image.pdf; path = Specs.pdf; sourceTree = "<group>"; };
 		E5C857921F5C4E0600BA7AE9 /* .travis.yml */ = {isa = PBXFileReference; lastKnownFileType = text; path = .travis.yml; sourceTree = "<group>"; };
-		E5D7A3A51EE8632A00716AF4 /* simplefs.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; path = simplefs.c; sourceTree = "<group>"; usesTabs = 1; };
+		E5D7A3A51EE8632A00716AF4 /* simplefs.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; lineEnding = 0; path = simplefs.c; sourceTree = "<group>"; usesTabs = 1; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
