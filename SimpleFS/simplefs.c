@@ -46,23 +46,16 @@ struct node {
 };
 
 
-struct bst_node {
-	// BST node used to print sorted results (used in FSfind)
-	char *path;
-	struct bst_node *left;
-	struct bst_node *right;
-};
-
-
 // MARK: - Global Variables
 
-struct node *root = NULL;			// Root of the tree
-char *buffer = NULL;				// Buffer used to read the input
-size_t buffer_size = 1024;			// Size of the buffer above
-char *path_buffer = NULL;			// Buffer used to reconstruct paths (used in FSfind)
-size_t path_buffer_size = 1024;		// Size of the buffer above
-unsigned int max_level = 0;			// Maximum level of the tree
-struct node *tombstone;				// Global tombstone used in hash tables
+struct node *root = NULL;					// Root of the tree
+char *buffer = NULL;						// Buffer used to read the input
+size_t buffer_size = 1024;					// Size of the buffer above
+char *path_buffer = NULL;					// Buffer used to reconstruct paths (used in FSfind)
+size_t path_buffer_size = 1024;				// Size of the buffer above
+unsigned int max_level = 0;					// Maximum level of the tree
+struct node *tombstone;						// Global tombstone used in hash tables
+unsigned long long total_resources = 0;		// Total resources counter (used in FSfind, root is excluded from count)
 
 
 // MARK: - Hash functions
@@ -127,110 +120,6 @@ int hash_delete(struct node **hash_table, char *string, unsigned char freeup_ele
 		return key;
 	}
 	return INVALID_KEY;
-}
-
-
-// MARK: - Heap functions
-
-void minHeapify(char **heap, size_t *heapsize, uint16_t i) {
-	uint16_t l = LEFT(i);
-	uint16_t r = RIGHT(i);
-	uint16_t min;
-	//if (l < *heapsize && minheap->array[l]->freq < minheap->array[i]->freq)
-	if (l < *heapsize && strcmp(heap[l], heap[i]) < 0)
-		min = l;
-	else
-		min = i;
-	//if (r < minheap->heapsize && minheap->array[r]->freq < minheap->array[min]->freq)
-	if (r < *heapsize && strcmp(heap[r], heap[min]) < 0)
-		min = r;
-	//if (min != i && minheap->array[min]->freq != minheap->array[i]->freq) {
-	if (min != i && strcmp(heap[min], heap[i]) != 0) {
-		char *temp = heap[min];
-		heap[min] = heap[i];
-		heap[i] = temp;
-		minHeapify(heap, heapsize, min);
-	}
-}
-
-
-char **buildMinHeap(char **heap, size_t *heapsize) {
-	struct heap *minheap = (struct heap *)calloc(1, sizeof(struct heap));
-	minheap->heapsize = ARRAY_SIZE;
-	minheap->array = (struct node **)calloc(ARRAY_SIZE, sizeof(struct node *));
-	CHECK_MALLOC(minheap->array);
-	for (uint16_t i = 0; i < ARRAY_SIZE; i++) {
-		minheap->array[i] = (struct node *)calloc(1, sizeof(struct node));
-		CHECK_MALLOC(minheap->array[i])
-		*(minheap->array[i]) = array[i];
-	}
-	for (int16_t i = ARRAY_SIZE / 2; i >= 0; i--) {
-		minHeapify(minheap, i);
-	}
-	return minheap;
-}
-
-
-struct node *popMin(struct node **minheap, size_t heapsize) {
-	struct node *min = minheap->array[0];
-	minheap->array[0] = minheap->array[minheap->heapsize - 1];
-	minheap->heapsize -= 1;
-	minHeapify(minheap, 0);
-	return min;
-}
-
-
-void minHeapInsert(struct heap *minheap, struct node *node) {
-	minheap->heapsize += 1;
-	if (minheap->heapsize > ARRAY_SIZE) {
-		perror("array overflow");
-		exit(EXIT_FAILURE);
-	}
-	minheap->array[minheap->heapsize - 1] = node;
-	minHeapify(minheap, 0);
-}
-
-
-// MARK: - BST functions
-
-struct bst_node *bst_insert(struct bst_node *root, char *path) {
-	// Insert a node into a BST
-	struct bst_node *new_node = NULL;
-	struct bst_node *prev = NULL;
-	struct bst_node *curr = root;
-	new_node = (struct bst_node *)calloc(1, sizeof(struct bst_node));
-	if (new_node == NULL) exit(EXIT_FAILURE);
-	new_node->path = path;
-	while (curr != NULL) {
-		prev = curr;
-		if (strcmp(path, curr->path) < 0) curr = curr->left;
-		else curr = curr->right;
-	}
-	if (prev == NULL) return new_node;
-	else if (strcmp(path, prev->path) < 0) prev->left = new_node;
-	else prev->right = new_node;
-	return root;
-}
-
-
-void bst_in_order_print(struct bst_node *node) {
-	// In order visit and print of a BST
-	if (node != NULL) {
-		bst_in_order_print(node->left);
-		printf("ok %s\n", node->path);
-		bst_in_order_print(node->right);
-	}
-}
-
-
-void bst_destroy(struct bst_node *node) {
-	// Completely destroy a BST
-	if (node != NULL) {
-		bst_destroy(node->left);
-		bst_destroy(node->right);
-		free(node->path);
-		free(node);
-	}
 }
 
 
@@ -403,6 +292,7 @@ void delete_recursive(struct node *node) {      // O(children number)
 	free(node->children_hash);
 	free(node->name);
 	free(node);
+	total_resources--;
 }
 
 
@@ -421,7 +311,38 @@ char *reconstruct_path(struct node *node) {     // O(pathlen)
 }
 
 
-void find_recursive(struct node *node, char *name, struct bst_node **bst_root) {      // O(found * pathlen + total resources)
+void swap(char *array[], long long i, long long j) {
+	char *temp = array[i];
+	array[i] = array[j];
+	array[j] = temp;
+}
+
+
+long long partition(char *array[], long long lo, long long hi) {
+	char *pivot = array[hi];
+	long long i = lo - 1;
+	for (long long j = lo; j < hi; j++) {
+		if (strcmp(array[j], pivot) <= 0) {
+			i++;
+			if (i != j)
+				swap(array, i, j);
+		}
+	}
+	swap(array, i+1, hi);
+	return i+1;
+}
+
+
+void quicksort(char *array[], long long lo, long long hi) {
+	if (lo < hi) {
+		long long p = partition(array, lo, hi);
+		quicksort(array, lo, p-1);
+		quicksort(array, p+1, hi);
+	}
+}
+
+
+void find_recursive(struct node *node, char *name, char **results, size_t *results_size) {      // O(found * pathlen + total resources)
 	// Recursively find node with name equal to the name provided (used in FSfind)
 	if (node != NULL) {
 		if (strcmp(name, node->name) == 0) {
@@ -430,12 +351,14 @@ void find_recursive(struct node *node, char *name, struct bst_node **bst_root) {
 			char *path = (char *)calloc(strlen(temp_path) + 1, sizeof(char));
 			if (path == NULL) exit(EXIT_FAILURE);
 			strcpy(path, temp_path);
-			*bst_root = bst_insert(*bst_root, path);
+			//min_heap_insert(heap, heapsize, path);
+			results[*results_size] = path;
+			*results_size += 1;
 		}
 		if (node->type == DIR_T) {
 			for (unsigned int i = 0; i < HASH_SIZE; i++)
 				if (node->children_hash[i] != NULL)
-					find_recursive(node->children_hash[i], name, bst_root);
+					find_recursive(node->children_hash[i], name, results, results_size);
 		}
 	}
 }
@@ -524,6 +447,7 @@ void FScreate(char *tokenized_path) {       // O(path)
 			if (KEY_IS_VALID(key)) {
 				parent->n_children++;
 				if (max_level < new_file->level) max_level = new_file->level;
+				total_resources++;
 				puts("ok");
 				return;
 			}
@@ -547,6 +471,7 @@ void FScreate_dir(char *tokenized_path) {       // O(path)
 			if (KEY_IS_VALID(key)) {
 				parent->n_children++;
 				if (max_level < new_dir->level) max_level = new_dir->level;
+				total_resources++;
 				puts("ok");
 				return;
 			}
@@ -597,6 +522,7 @@ void FSdelete(char *tokenized_path) {     // O(path)
 		key = hash_delete(parent->children_hash, filename, 1);
 		if (KEY_IS_VALID(key)) {
 			parent->n_children--;
+			total_resources--;
 			puts("ok");
 			return;
 		}
@@ -626,11 +552,14 @@ void FSdelete_r(char *tokenized_path) {       // O(# children)
 
 void FSfind(char *name) {       // O(# total resources + (found resources)^2)
 	// File system command: find
-	struct bst_node *bst_root = NULL;
-	find_recursive(root, name, &bst_root);
-	if (bst_root == NULL) puts("no");
-	else bst_in_order_print(bst_root);
-	bst_destroy(bst_root);
+	char **results = NULL;
+	size_t results_size = 0;
+	results = (char **)calloc(total_resources, sizeof(char **));
+	find_recursive(root, name, results, &results_size);
+	if (results[0] == NULL) puts("no");
+	quicksort(results, 0, results_size-1);
+	for (size_t i = 0; i < results_size; i++)
+		printf("ok %s\n", results[i]);
 }
 
 
