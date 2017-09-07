@@ -558,8 +558,11 @@ void FSfind(char *name) {       // O(# total resources + (found resources)^2)
 	find_recursive(root, name, results, &results_size);
 	if (results[0] == NULL) puts("no");
 	quicksort(results, 0, results_size-1);
-	for (size_t i = 0; i < results_size; i++)
+	for (size_t i = 0; i < results_size; i++) {
 		printf("ok %s\n", results[i]);
+		free(results[i]);
+	}
+	free(results);
 }
 
 
