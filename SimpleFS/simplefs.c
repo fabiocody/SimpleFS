@@ -20,6 +20,9 @@
 #define FILE_T 1
 #define INVALID_KEY -1
 // MARK: Macro
+#define PARENT(i) (i - 1) / 2
+#define LEFT(i) 2 * i + 1
+#define RIGHT(i) 2 * i + 2
 #define KEY_IS_INVALID(key) key < 0
 #define KEY_IS_VALID(key) key >= 0
 
@@ -124,6 +127,67 @@ int hash_delete(struct node **hash_table, char *string, unsigned char freeup_ele
 		return key;
 	}
 	return INVALID_KEY;
+}
+
+
+// MARK: - Heap functions
+
+void minHeapify(char **heap, size_t *heapsize, uint16_t i) {
+	uint16_t l = LEFT(i);
+	uint16_t r = RIGHT(i);
+	uint16_t min;
+	//if (l < *heapsize && minheap->array[l]->freq < minheap->array[i]->freq)
+	if (l < *heapsize && strcmp(heap[l], heap[i]) < 0)
+		min = l;
+	else
+		min = i;
+	//if (r < minheap->heapsize && minheap->array[r]->freq < minheap->array[min]->freq)
+	if (r < *heapsize && strcmp(heap[r], heap[min]) < 0)
+		min = r;
+	//if (min != i && minheap->array[min]->freq != minheap->array[i]->freq) {
+	if (min != i && strcmp(heap[min], heap[i]) != 0) {
+		char *temp = heap[min];
+		heap[min] = heap[i];
+		heap[i] = temp;
+		minHeapify(heap, heapsize, min);
+	}
+}
+
+
+char **buildMinHeap(char **heap, size_t *heapsize) {
+	struct heap *minheap = (struct heap *)calloc(1, sizeof(struct heap));
+	minheap->heapsize = ARRAY_SIZE;
+	minheap->array = (struct node **)calloc(ARRAY_SIZE, sizeof(struct node *));
+	CHECK_MALLOC(minheap->array);
+	for (uint16_t i = 0; i < ARRAY_SIZE; i++) {
+		minheap->array[i] = (struct node *)calloc(1, sizeof(struct node));
+		CHECK_MALLOC(minheap->array[i])
+		*(minheap->array[i]) = array[i];
+	}
+	for (int16_t i = ARRAY_SIZE / 2; i >= 0; i--) {
+		minHeapify(minheap, i);
+	}
+	return minheap;
+}
+
+
+struct node *popMin(struct node **minheap, size_t heapsize) {
+	struct node *min = minheap->array[0];
+	minheap->array[0] = minheap->array[minheap->heapsize - 1];
+	minheap->heapsize -= 1;
+	minHeapify(minheap, 0);
+	return min;
+}
+
+
+void minHeapInsert(struct heap *minheap, struct node *node) {
+	minheap->heapsize += 1;
+	if (minheap->heapsize > ARRAY_SIZE) {
+		perror("array overflow");
+		exit(EXIT_FAILURE);
+	}
+	minheap->array[minheap->heapsize - 1] = node;
+	minHeapify(minheap, 0);
 }
 
 
