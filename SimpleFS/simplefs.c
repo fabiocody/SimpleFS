@@ -127,9 +127,7 @@ int hash_delete(struct node **hash_table, char *string, unsigned char freeup_ele
 
 char *get_next_token(char *tokenized_path) {        // O(1)
 	// Get next token from a tokenized string (i.e. with all spaces replaced by 0s)
-	if (tokenized_path == NULL)
-		return NULL;
-	else if (tokenized_path[strlen(tokenized_path) + 1] != '\0')
+	if (tokenized_path != NULL && tokenized_path[strlen(tokenized_path) + 1] != '\0')
 		return &tokenized_path[strlen(tokenized_path) + 1];
 	else
 		return NULL;
