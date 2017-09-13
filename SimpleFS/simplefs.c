@@ -149,10 +149,10 @@ char *get_filename(char *tokenized_path) {      // O(pathlen)
 
 char *get_parent_name(char *tokenized_path) {       // O(pathlen)
 	// Get the parent's name from a tokenized path (i.e. the penultimate resource's name)
-	char *token = get_next_token(tokenized_path)/*, *prev_token = NULL*/;
+	char *token = get_next_token(tokenized_path);
+	char *prev_token = NULL;
 	char *filename = get_filename(tokenized_path);
 	if (token == filename) return "";
-	char *prev_token = NULL;
 	while (token != filename) {
 		prev_token = token;
 		token = get_next_token(token);
