@@ -71,8 +71,7 @@ unsigned int hash_function(char *string) {		// O(k) since names have finite leng
 unsigned int double_hash(char *string, unsigned int step) {		// O(1)
 	// Handle probing for closed hashing
 	unsigned int key = hash_function(string);
-	if (step == 0) return key % HASH_SIZE;
-	else return (key + step * (1 + (key % (HASH_SIZE - 1)))) % HASH_SIZE;
+	return (key + step * (1 + (key % (HASH_SIZE - 1)))) % HASH_SIZE;
 }
 
 
@@ -83,10 +82,10 @@ int hash_insert(struct node **hash_table, struct node *node) {     // O(HASH_SIZ
 		key = double_hash(node->name, i);
 		if (hash_table[key] == NULL || hash_table[key] == tombstone) {
 			hash_table[key] = node;
-			return key;     // SUCCESS
+			return key;
 		}
 	}
-	return INVALID_KEY;		// FAILURE
+	return INVALID_KEY;
 }
 
 
@@ -108,7 +107,7 @@ int hash_lookup(struct node **hash_table, char *string) {      // O(HASH_SIZE) �
 int hash_delete(struct node **hash_table, char *string, unsigned char freeup_element) {      // O(HASH_SIZE) ≈ O(k)
 	// Delete a node from a hash table
 	// The freeup_element argument is used to free the node besides removing it from the hash table. This comes handy in FSdelete_r, since I can delete a node from the parent's hash table and then free up the subtree with no worries
-	int key = hash_lookup(hash_table, string);
+	int key = hash_lookup(hash_table, string);		// O(HASHSIZE) ≈ O(k)
 	if (KEY_IS_VALID(key)) {
 		if (freeup_element) {
 			free(hash_table[key]->content);
@@ -147,11 +146,12 @@ char *get_filename(char *tokenized_path) {      // O(pathlen)
 }
 
 
-char *get_parent_name(char *tokenized_path) {       // O(pathlen)
+char *get_parent_name(char *tokenized_path, char *filename) {       // O(pathlen)
 	// Get the parent's name from a tokenized path (i.e. the penultimate resource's name)
 	char *token = get_next_token(tokenized_path);
 	char *prev_token = NULL;
-	char *filename = get_filename(tokenized_path);
+	//char *filename = get_filename(tokenized_path);
+	if (filename == NULL) filename = get_filename(tokenized_path);
 	if (token == filename) return "";
 	while (token != filename) {
 		prev_token = token;
@@ -437,7 +437,7 @@ void FScreate(char *tokenized_path) {       // O(path)
 		return;
 	}
 	struct node *new_file = NULL;
-	char *parent_name = get_parent_name(tokenized_path);		// O(path)
+	char *parent_name = get_parent_name(tokenized_path, NULL);		// O(path)
 	int key;
 	if (strcmp(parent_name, parent->name) == 0 && parent->type == DIR_T && parent->level < MAX_TREE_DEPTH - 1 && parent->n_children < MAX_CHILDREN) {
 		new_file = file_init(tokenized_path, parent);
@@ -461,7 +461,7 @@ void FScreate_dir(char *tokenized_path) {       // O(path)
 	// File system command: create_dir
 	struct node *parent = walk(tokenized_path);		// O(path)
 	struct node *new_dir = NULL;
-	char *parent_name = get_parent_name(tokenized_path);		// O(path)
+	char *parent_name = get_parent_name(tokenized_path, NULL);		// O(path)
 	int key;
 	if (parent != NULL && strcmp(parent_name, parent->name) == 0 && parent->type == DIR_T && parent->level < MAX_TREE_DEPTH - 1 && parent->n_children < MAX_CHILDREN) {
 		new_dir = dir_init(tokenized_path, parent);
