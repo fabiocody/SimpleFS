@@ -50,9 +50,9 @@ struct node {
 
 struct node *root = NULL;					// Root of the tree
 char *buffer = NULL;						// Buffer used to read the input
-size_t buffer_size = 256;					// Size of the buffer above
+size_t buffer_size = 512;					// Size of the buffer above
 char *path_buffer = NULL;					// Buffer used to reconstruct paths (used in FSfind)
-size_t path_buffer_size = 256;				// Size of the buffer above
+size_t path_buffer_size = 512;				// Size of the buffer above
 unsigned int max_level = 0;					// Maximum level of the tree
 struct node *tombstone;						// Global tombstone used in hash tables
 unsigned long long total_resources = 0;		// Total resources counter (used in FSfind, root is excluded from count)
@@ -168,13 +168,13 @@ struct node *file_init(char *tokenized_path, struct node *parent) {       // O(1
 	new_file->type = FILE_T;
 	char *filename;
 	if (strcmp(tokenized_path, "tombstone") == 0) {
-		new_file->name = (char *)calloc(strlen("tombstone") + 1, sizeof(char));
+		new_file->name = (char *)malloc((strlen("tombstone") + 1) * sizeof(char));
 		if (new_file->name == NULL) exit(EXIT_FAILURE);
 		strcpy(new_file->name, "tombstone");
 	}
 	else {
 		filename = get_filename(tokenized_path);
-		new_file->name = (char *)calloc(strlen(filename) + 1, sizeof(char));
+		new_file->name = (char *)malloc((strlen(filename) + 1) * sizeof(char));
 		if (new_file->name == NULL) exit(EXIT_FAILURE);
 		strcpy(new_file->name, filename);
 	}
@@ -193,11 +193,11 @@ struct node *dir_init(char *tokenized_path, struct node *parent) {        // O(1
 	new_dir->type = DIR_T;
 	char *filename = get_filename(tokenized_path);
 	if (filename == NULL) {
-		new_dir->name = (char *)calloc(2, sizeof(char));
+		new_dir->name = (char *)malloc(2 * sizeof(char));
 		if (new_dir->name == NULL) exit(EXIT_FAILURE);
 		strcpy(new_dir->name, "");
 	} else {
-		new_dir->name = (char *)calloc(strlen(filename) + 1, sizeof(char));
+		new_dir->name = (char *)malloc((strlen(filename) + 1) * sizeof(char));
 		if (new_dir->name == NULL) exit(EXIT_FAILURE);
 		strcpy(new_dir->name, filename);
 	}
@@ -225,7 +225,7 @@ char *read_from_stdin(void) {       // O(strlen(input))
 		}
 		if (buffer[i - 1] != '\n') {
 			// If the line is not over but you've nearly reached a buffer overflow, expand the buffer
-			buffer_size *= 2;
+			buffer_size <<= 1;
 			buffer = (char *)realloc(buffer, buffer_size * sizeof(char));
 			if (buffer == NULL) exit(EXIT_FAILURE);
 			memset(&buffer[i], 0, buffer_size-i);
@@ -252,7 +252,7 @@ unsigned short path_level(char *tokenized_path) {		// O(pathlen)
 	unsigned short level = 0;
 	while (token != NULL) {
 		token = get_next_token(token);
-		level++;
+		level += 1;
 	}
 	return level;
 }
@@ -272,7 +272,7 @@ struct node *walk(char *tokenized_path) {       // O(pathlen)
 	unsigned int counter = 0;
 	while (token != NULL) {
 		token = get_next_token(token);
-		counter++;
+		counter += 1;
 	}
 	if (counter > 0)
 		return NULL;
@@ -322,7 +322,7 @@ long long partition(char *array[], long long lo, long long hi) {
 	long long i = lo - 1;
 	for (long long j = lo; j < hi; j++) {
 		if (strcmp(array[j], pivot) <= 0) {
-			i++;
+			i += 1;
 			if (i != j)
 				swap(array, i, j);
 		}
@@ -347,7 +347,7 @@ void find_recursive(struct node *node, char *name, char **results, size_t *resul
 		if (strcmp(name, node->name) == 0) {
 			if (path_buffer != NULL) memset(path_buffer, 0, path_buffer_size);
 			char *temp_path = reconstruct_path(node);
-			char *path = (char *)calloc(strlen(temp_path) + 1, sizeof(char));
+			char *path = (char *)malloc((strlen(temp_path) + 1) * sizeof(char));
 			if (path == NULL) exit(EXIT_FAILURE);
 			strcpy(path, temp_path);
 			//min_heap_insert(heap, heapsize, path);
@@ -444,9 +444,9 @@ void FScreate(char *tokenized_path) {       // O(path)
 		if (new_file != NULL) {
 			key = hash_insert(parent->children_hash, new_file);
 			if (KEY_IS_VALID(key)) {
-				parent->n_children++;
+				parent->n_children += 1;
 				if (max_level < new_file->level) max_level = new_file->level;
-				total_resources++;
+				total_resources += 1;
 				puts("ok");
 				return;
 			}
@@ -468,9 +468,9 @@ void FScreate_dir(char *tokenized_path) {       // O(path)
 		if (new_dir != NULL) {
 			key = hash_insert(parent->children_hash, new_dir);
 			if (KEY_IS_VALID(key)) {
-				parent->n_children++;
+				parent->n_children += 1;
 				if (max_level < new_dir->level) max_level = new_dir->level;
-				total_resources++;
+				total_resources += 1;
 				puts("ok");
 				return;
 			}
@@ -553,7 +553,9 @@ void FSfind(char *name) {       // O(# total resources + (found resources)^2)
 	// File system command: find
 	char **results = NULL;
 	size_t results_size = 0;
-	results = (char **)calloc(total_resources, sizeof(char **));
+	results = (char **)malloc(total_resources * sizeof(char **));
+	if (results == NULL) exit(EXIT_FAILURE);
+	results[0] = NULL;
 	find_recursive(root, name, results, &results_size);
 	if (results[0] == NULL) puts("no");
 	quicksort(results, 0, results_size-1);
@@ -573,7 +575,7 @@ int main(int argc, char *argv[]) {
 	char ROOT_NAME[3] = "/";
 	char *command = NULL, *path = NULL, *content = NULL;
 	
-	buffer = (char *)calloc(buffer_size, sizeof(char));
+	buffer = (char *)malloc(buffer_size * sizeof(char));
 	if (buffer == NULL) exit(EXIT_FAILURE);
 	root = dir_init(ROOT_NAME, NULL);
 	tombstone = file_init("tombstone", NULL);
@@ -588,13 +590,13 @@ int main(int argc, char *argv[]) {
 		// Prepare input for handling and set path pointer
 		size_t i = 0;
 		for (; i < buffer_size && buffer[i] != '"' && buffer[i] != 0; i++) {
-			if (buffer[i] == ' ' || buffer[i] == '\t' || buffer[i] == '/') {
+			if (buffer[i] == ' ' || buffer[i] == '/') {
 				buffer[i] = 0;
 				if (path == NULL) {
 					do {
 						buffer[i] = 0;
 						i++;
-					} while (i < buffer_size-1 && (buffer[i+1] == ' ' || buffer[i+1] == '\t' || buffer[i+1] == '/'));
+					} while (i < buffer_size-1 && (buffer[i+1] == ' ' || buffer[i+1] == '/'));
 					path = &buffer[i];
 					if (buffer[i] == '/') buffer[i] = 0;
 				}
