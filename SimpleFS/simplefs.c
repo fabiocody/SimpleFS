@@ -68,18 +68,19 @@ unsigned int hash_function(char *string) {		// O(k) since names have finite leng
 }
 
 
-unsigned int double_hash(char *string, unsigned int step) {		// O(1)
+unsigned int double_hash(char *string, unsigned int step) {		// O(k)
 	// Handle probing for closed hashing
-	unsigned int key = hash_function(string);
-	return (key + step * (1 + (key % (HASH_SIZE - 1)))) % HASH_SIZE;
+	unsigned int key = hash_function(string);		// O(k)
+	if (step == 0) return key % HASH_SIZE;
+	else return (key + step * (1 + (key % (HASH_SIZE - 1)))) % HASH_SIZE;
 }
 
 
-int hash_insert(struct node **hash_table, struct node *node) {     // O(HASH_SIZE) ≈ O(k)
+int hash_insert(struct node **hash_table, struct node *node) {     // O(HASH_SIZE) -> O(k)
 	// Insert a node into a hash table
 	int key;
 	for (unsigned int i = 0; i < HASH_SIZE; i++) {
-		key = double_hash(node->name, i);
+		key = double_hash(node->name, i);		// O(k)
 		if (hash_table[key] == NULL || hash_table[key] == tombstone) {
 			hash_table[key] = node;
 			return key;
@@ -89,7 +90,7 @@ int hash_insert(struct node **hash_table, struct node *node) {     // O(HASH_SIZ
 }
 
 
-int hash_lookup(struct node **hash_table, char *string) {      // O(HASH_SIZE) ≈ O(k)
+int hash_lookup(struct node **hash_table, char *string) {      // O(HASH_SIZE) -> O(k)
 	// Perform a lookup within a hash table
 	// Return INVALID_KEY if no element with name equal to string is found
 	int key;
@@ -104,10 +105,10 @@ int hash_lookup(struct node **hash_table, char *string) {      // O(HASH_SIZE) �
 }
 
 
-int hash_delete(struct node **hash_table, char *string, unsigned char freeup_element) {      // O(HASH_SIZE) ≈ O(k)
+int hash_delete(struct node **hash_table, char *string, unsigned char freeup_element) {      // O(HASH_SIZE) -> O(k)
 	// Delete a node from a hash table
 	// The freeup_element argument is used to free the node besides removing it from the hash table. This comes handy in FSdelete_r, since I can delete a node from the parent's hash table and then free up the subtree with no worries
-	int key = hash_lookup(hash_table, string);		// O(HASHSIZE) ≈ O(k)
+	int key = hash_lookup(hash_table, string);		// O(k)
 	if (KEY_IS_VALID(key)) {
 		if (freeup_element) {
 			free(hash_table[key]->content);
@@ -134,11 +135,11 @@ char *get_next_token(char *tokenized_path) {        // O(1)
 }
 
 
-char *get_filename(char *tokenized_path) {      // O(pathlen)
+char *get_filename(char *tokenized_path) {      // O(path_depth)
 	// Get the resource's name from a tokenized path (i.e. the last resource's name)
 	char *token = get_next_token(tokenized_path);
 	char *prev_token = NULL;
-	while (token != NULL) {
+	while (token != NULL) {		// O(path_depth)
 		prev_token = token;
 		token = get_next_token(token);
 	}
@@ -146,14 +147,14 @@ char *get_filename(char *tokenized_path) {      // O(pathlen)
 }
 
 
-char *get_parent_name(char *tokenized_path, char *filename) {       // O(pathlen)
+char *get_parent_name(char *tokenized_path) {       // O(path_depth)
 	// Get the parent's name from a tokenized path (i.e. the penultimate resource's name)
 	char *token = get_next_token(tokenized_path);
 	char *prev_token = NULL;
-	//char *filename = get_filename(tokenized_path);
-	if (filename == NULL) filename = get_filename(tokenized_path);
-	if (token == filename) return "";
-	while (token != filename) {
+	char *filename = get_filename(tokenized_path);		// O(path_depth)
+	if (token == filename)
+		return "";
+	while (token != filename) {		// O(path_depth)
 		prev_token = token;
 		token = get_next_token(token);
 	}
@@ -161,7 +162,7 @@ char *get_parent_name(char *tokenized_path, char *filename) {       // O(pathlen
 }
 
 
-struct node *file_init(char *tokenized_path, struct node *parent) {       // O(1)
+struct node *file_init(char *tokenized_path, struct node *parent) {       // O(path_depth)
 	// Initialize a file node
 	struct node *new_file = (struct node *)calloc(1, sizeof(struct node));
 	if (new_file == NULL) return NULL;
@@ -173,7 +174,7 @@ struct node *file_init(char *tokenized_path, struct node *parent) {       // O(1
 		strcpy(new_file->name, "tombstone");
 	}
 	else {
-		filename = get_filename(tokenized_path);
+		filename = get_filename(tokenized_path);	// O(path_depth)
 		new_file->name = (char *)malloc((strlen(filename) + 1) * sizeof(char));
 		if (new_file->name == NULL) exit(EXIT_FAILURE);
 		strcpy(new_file->name, filename);
@@ -186,12 +187,12 @@ struct node *file_init(char *tokenized_path, struct node *parent) {       // O(1
 }
 
 
-struct node *dir_init(char *tokenized_path, struct node *parent) {        // O(1)
+struct node *dir_init(char *tokenized_path, struct node *parent) {        // O(path_depth)
 	// Initialize a directory node
 	struct node *new_dir = (struct node *)calloc(1, sizeof(struct node));
 	if (new_dir == NULL) return NULL;
 	new_dir->type = DIR_T;
-	char *filename = get_filename(tokenized_path);
+	char *filename = get_filename(tokenized_path);		// O(path_depth)
 	if (filename == NULL) {
 		new_dir->name = (char *)malloc(2 * sizeof(char));
 		if (new_dir->name == NULL) exit(EXIT_FAILURE);
@@ -238,7 +239,7 @@ struct node *get_child(struct node* node, char *filename) {     // O(k)
 	// Get child node from a parent node
 	if (node == NULL || filename == NULL || node->type == FILE_T)
 		return NULL;
-	int key = hash_lookup(node->children_hash, filename);
+	int key = hash_lookup(node->children_hash, filename);		// O(k)
 	if (KEY_IS_VALID(key))
 		return node->children_hash[key];
 	else
@@ -246,11 +247,11 @@ struct node *get_child(struct node* node, char *filename) {     // O(k)
 }
 
 
-unsigned short path_level(char *tokenized_path) {		// O(pathlen)
+unsigned short path_level(char *tokenized_path) {		// O(path_depth)
 	// Get the level of the node specified by the path provided
 	char *token = get_next_token(tokenized_path);
 	unsigned short level = 0;
-	while (token != NULL) {
+	while (token != NULL) {		// O(path_depth)
 		token = get_next_token(token);
 		level += 1;
 	}
@@ -258,19 +259,19 @@ unsigned short path_level(char *tokenized_path) {		// O(pathlen)
 }
 
 
-struct node *walk(char *tokenized_path) {       // O(pathlen)
+struct node *walk(char *tokenized_path) {       // O(path_depth)
 	// Walk through the tree until the last valid position (i.e. actual node or parent)
 	// Return NULL if no valid position is found. This could be because a midway node is absent.
 	struct node *curr_node = root, *prev_node = NULL;
 	char *token = get_next_token(tokenized_path);
-	while (curr_node != NULL) {
+	while (curr_node != NULL) {		// O(path_depth)
 		prev_node = curr_node;
 		curr_node = get_child(curr_node, token);
 		token = get_next_token(token);
 	}
 	// If I walked throughout the path, the node is valid, otherwise return NULL
 	unsigned int counter = 0;
-	while (token != NULL) {
+	while (token != NULL) {		// O(path_depth)
 		token = get_next_token(token);
 		counter += 1;
 	}
@@ -280,7 +281,7 @@ struct node *walk(char *tokenized_path) {       // O(pathlen)
 }
 
 
-void delete_recursive(struct node *node) {      // O(children number)
+void delete_recursive(struct node *node) {      // O(HASH_SIZE) -> O(k)			recursive call = O(#children)
 	// Recursively delete a subtree
 	if (node->type == DIR_T) {
 		for (unsigned short i = 0; i < HASH_SIZE; i++)
@@ -295,7 +296,7 @@ void delete_recursive(struct node *node) {      // O(children number)
 }
 
 
-char *reconstruct_path(struct node *node) {     // O(pathlen)
+char *reconstruct_path(struct node *node) {     // O(path_depth)
 	// Recursively reconstruct the path of a node (used in FSfind)
 	char new_name[MAX_NAME_LEN] = {0};
 	if (path_buffer_size < buffer_size || path_buffer == NULL) {
@@ -310,14 +311,14 @@ char *reconstruct_path(struct node *node) {     // O(pathlen)
 }
 
 
-void swap(char *array[], long long i, long long j) {
+void swap(char *array[], long long i, long long j) {		// O(1)
 	char *temp = array[i];
 	array[i] = array[j];
 	array[j] = temp;
 }
 
 
-long long partition(char *array[], long long lo, long long hi) {
+long long partition(char *array[], long long lo, long long hi) {		// Theta(hi)
 	char *pivot = array[hi];
 	long long i = lo - 1;
 	for (long long j = lo; j < hi; j++) {
@@ -332,7 +333,7 @@ long long partition(char *array[], long long lo, long long hi) {
 }
 
 
-void quicksort(char *array[], long long lo, long long hi) {
+void quicksort(char *array[], long long lo, long long hi) {		// O(hi log(hi))
 	if (lo < hi) {
 		long long p = partition(array, lo, hi);
 		quicksort(array, lo, p-1);
@@ -341,16 +342,15 @@ void quicksort(char *array[], long long lo, long long hi) {
 }
 
 
-void find_recursive(struct node *node, char *name, char **results, size_t *results_size) {      // O(found * pathlen + total resources)
+void find_recursive(struct node *node, char *name, char **results, size_t *results_size) {      // O(tree_depth)		recursive call = O(results_size * tree_depth)
 	// Recursively find node with name equal to the name provided (used in FSfind)
 	if (node != NULL) {
 		if (strcmp(name, node->name) == 0) {
 			if (path_buffer != NULL) memset(path_buffer, 0, path_buffer_size);
-			char *temp_path = reconstruct_path(node);
+			char *temp_path = reconstruct_path(node);	// O(path_depth)
 			char *path = (char *)malloc((strlen(temp_path) + 1) * sizeof(char));
 			if (path == NULL) exit(EXIT_FAILURE);
 			strcpy(path, temp_path);
-			//min_heap_insert(heap, heapsize, path);
 			results[*results_size] = path;
 			*results_size += 1;
 		}
@@ -367,7 +367,7 @@ void find_recursive(struct node *node, char *name, char **results, size_t *resul
 
 
 #ifdef TEST
-void walk_recursive(struct node *node) {        // O(children number)
+void walk_recursive(struct node *node) {
 	// JUST FOR TESTING
 	// Walk throughtout the tree and print whatever found
 	if (path_buffer != NULL)
@@ -437,7 +437,7 @@ void FScreate(char *tokenized_path) {       // O(path)
 		return;
 	}
 	struct node *new_file = NULL;
-	char *parent_name = get_parent_name(tokenized_path, NULL);		// O(path)
+	char *parent_name = get_parent_name(tokenized_path);		// O(path)
 	int key;
 	if (strcmp(parent_name, parent->name) == 0 && parent->type == DIR_T && parent->level < MAX_TREE_DEPTH - 1 && parent->n_children < MAX_CHILDREN) {
 		new_file = file_init(tokenized_path, parent);
@@ -461,7 +461,7 @@ void FScreate_dir(char *tokenized_path) {       // O(path)
 	// File system command: create_dir
 	struct node *parent = walk(tokenized_path);		// O(path)
 	struct node *new_dir = NULL;
-	char *parent_name = get_parent_name(tokenized_path, NULL);		// O(path)
+	char *parent_name = get_parent_name(tokenized_path);		// O(path)
 	int key;
 	if (parent != NULL && strcmp(parent_name, parent->name) == 0 && parent->type == DIR_T && parent->level < MAX_TREE_DEPTH - 1 && parent->n_children < MAX_CHILDREN) {
 		new_dir = dir_init(tokenized_path, parent);
@@ -510,15 +510,15 @@ void FSwrite(char *tokenized_path, char *content) {     // O(path + file_content
 }
 
 
-void FSdelete(char *tokenized_path) {     // O(path)
+void FSdelete(char *tokenized_path) {     // O(path_depth)
 	// File system command: delete
-	struct node *node = walk(tokenized_path);	// O(path)
+	struct node *node = walk(tokenized_path);	// O(path_depth)
 	struct node *parent = NULL;
-	char *filename = get_filename(tokenized_path);		// O(path)
+	char *filename = get_filename(tokenized_path);		// O(path_depth)
 	int key;
-	if (node != NULL && strcmp(filename, node->name) == 0 && node->n_children == 0 && path_level(tokenized_path) == node->level) {
+	if (node != NULL && strcmp(filename, node->name) == 0 && node->n_children == 0 && path_level(tokenized_path) == node->level) {		// O(path_depth)
 		parent = node->parent;
-		key = hash_delete(parent->children_hash, filename, 1);
+		key = hash_delete(parent->children_hash, filename, 1);		// O(k)
 		if (KEY_IS_VALID(key)) {
 			parent->n_children--;
 			total_resources--;
@@ -530,18 +530,18 @@ void FSdelete(char *tokenized_path) {     // O(path)
 }
 
 
-void FSdelete_r(char *tokenized_path) {       // O(# children)
+void FSdelete_r(char *tokenized_path) {       // O(#children + path_depth)
 	// File system command: delete_r
-	struct node *node = walk(tokenized_path);
+	struct node *node = walk(tokenized_path);		// O(path_depth)
 	struct node *parent = NULL;
-	char *filename = get_filename(tokenized_path);
+	char *filename = get_filename(tokenized_path);		// O(path_depth)
 	int key;
 	if (node != NULL && strcmp(filename, node->name) == 0) {
 		parent = node->parent;
-		key = hash_delete(parent->children_hash, filename, 0);
+		key = hash_delete(parent->children_hash, filename, 0);		// O(k)
 		if (KEY_IS_VALID(key))
 			parent->n_children--;
-		delete_recursive(node);
+		delete_recursive(node);		// O(#children)
 		puts("ok");
 		return;
 	}
@@ -549,16 +549,16 @@ void FSdelete_r(char *tokenized_path) {       // O(# children)
 }
 
 
-void FSfind(char *name) {       // O(# total resources + (found resources)^2)
+void FSfind(char *name) {       // O(results_size * tree_depth + results_size * log(results_size))
 	// File system command: find
 	char **results = NULL;
 	size_t results_size = 0;
 	results = (char **)malloc(total_resources * sizeof(char **));
 	if (results == NULL) exit(EXIT_FAILURE);
 	results[0] = NULL;
-	find_recursive(root, name, results, &results_size);
+	find_recursive(root, name, results, &results_size);		// O(results_size * tree_depth)
 	if (results[0] == NULL) puts("no");
-	quicksort(results, 0, results_size-1);
+	quicksort(results, 0, results_size-1);		// O(results_size * log(results_size))
 	for (size_t i = 0; i < results_size; i++) {
 		printf("ok %s\n", results[i]);
 		free(results[i]);
