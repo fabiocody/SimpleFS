@@ -50,9 +50,9 @@ struct node {
 
 struct node *root = NULL;					// Root of the tree
 char *buffer = NULL;						// Buffer used to read the input
-size_t buffer_size = 1024;					// Size of the buffer above
+size_t buffer_size = 256;					// Size of the buffer above
 char *path_buffer = NULL;					// Buffer used to reconstruct paths (used in FSfind)
-size_t path_buffer_size = 1024;				// Size of the buffer above
+size_t path_buffer_size = 256;				// Size of the buffer above
 unsigned int max_level = 0;					// Maximum level of the tree
 struct node *tombstone;						// Global tombstone used in hash tables
 unsigned long long total_resources = 0;		// Total resources counter (used in FSfind, root is excluded from count)
@@ -212,7 +212,7 @@ struct node *dir_init(char *tokenized_path, struct node *parent) {        // O(1
 
 
 char *read_from_stdin(void) {       // O(strlen(input))
-	// Guess what? This function reads from stdin.
+	// This function reads from stdin.
 	unsigned int i = 0;
 	memset(buffer, 0, buffer_size);
 	while (1) {
@@ -501,7 +501,7 @@ void FSwrite(char *tokenized_path, char *content) {     // O(path + file_content
 	if (file != NULL && file->type == FILE_T && strcmp(filename, file->name) == 0) {
 		file->content = (char *)realloc(file->content, (content_len + 1) * sizeof(char));
 		if (file->content == NULL) exit(EXIT_FAILURE);
-		memset(file->content, 0, content_len + 1);
+		//memset(file->content, 0, content_len + 1);
 		strcpy(file->content, content);
 		printf("ok %llu\n", content_len);
 		return;
