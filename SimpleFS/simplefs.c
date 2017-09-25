@@ -362,7 +362,6 @@ void find_recursive(struct node *node, char *name, char **results, size_t *resul
 
 // MARK: - Testing functions
 
-
 #ifdef TEST
 void walk_recursive(struct node *node) {
 	// JUST FOR TESTING
