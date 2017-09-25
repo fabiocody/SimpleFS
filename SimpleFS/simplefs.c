@@ -20,9 +20,6 @@
 #define FILE_T 1
 #define INVALID_KEY -1
 // MARK: Macro
-#define PARENT(i) (i - 1) / 2
-#define LEFT(i) 2 * i + 1
-#define RIGHT(i) 2 * i + 2
 #define KEY_IS_INVALID(key) key < 0
 #define KEY_IS_VALID(key) key >= 0
 
