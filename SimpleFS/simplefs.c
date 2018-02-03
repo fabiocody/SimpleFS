@@ -3,7 +3,7 @@
 //  SimpleFS
 //
 //  Created by Fabio Codiglioni on 07/06/17.
-//  Copyright © 2017 Fabio Codiglioni. All rights reserved.
+//  Copyright © 2017 Fabio Codiglioni.
 //
 
 #include <stdio.h>
