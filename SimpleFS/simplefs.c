@@ -365,7 +365,7 @@ void find_recursive(struct node *node, char *name, char **results, size_t *resul
 #ifdef TEST
 void walk_recursive(struct node *node) {
 	// JUST FOR TESTING
-	// Walk throughtout the tree and print whatever found
+	// Walk throughout the tree and print whatever found
 	if (path_buffer != NULL)
 		memset(path_buffer, 0, path_buffer_size);
 	if (node == root)
