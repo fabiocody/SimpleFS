@@ -1,2 +1,3 @@
 language: c
+dist: xenial
 script: gcc -DEVAL -static -std=c99 -O2 -lm SimpleFS/simplefs.c
